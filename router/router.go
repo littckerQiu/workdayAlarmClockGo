@@ -525,6 +525,7 @@ func Init(urlPrefix string) *gin.Engine {
 			"stopUnix":    player.StopUnix,
 			"skipAlarm":   player.SkipAlarm,
 			"oversleep":   oversleep.Status(),
+			"alarms":      conf.Cfg.Alarm,
 		})
 	})
 

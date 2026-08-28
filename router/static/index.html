@@ -260,7 +260,7 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
       <div class="tp-col">
         <div class="tp-label">分</div>
         <div class="tp-display" id="tpMin">30</div>
-        <div class="tp-btns"><button class="tp-btn" onclick="adjMin(-5)">&#8722;</button><button class="tp-btn" onclick="adjMin(5)">+</button></div>
+        <div class="tp-btns"><button class="tp-btn" onclick="adjMin(-1)">&#8722;</button><button class="tp-btn" onclick="adjMin(1)">+</button></div>
       </div>
     </div>
     <div class="form-label">重复</div>
@@ -404,11 +404,14 @@ function loadAlarms(){
     if(st!==200)return;
     try{
       var d=JSON.parse(text);var list=$('alarmList');list.innerHTML='';
-      if(d.playList&&d.playList.length){
-        for(var i=0;i<d.playList.length;i++){
-          var a=d.playList[i];var days=a[1]?a[1].join(','):'每天';
+      var alarms=d.alarms||{};
+      var keys=Object.keys(alarms).sort();
+      if(keys.length>0){
+        for(var i=0;i<keys.length;i++){
+          var time=keys[i];
+          var days=alarms[time]?alarms[time].join(','):'每天';
           var item=document.createElement('div');item.className='alarm-item';
-          item.innerHTML='<div><div class="time">'+a[0]+'</div><div class="days">'+days+'</div></div><button class="btn btn-danger btn-sm" onclick="delAlarm(\''+a[0]+'\')">删除</button>';
+          item.innerHTML='<div><div class="alarm-time">'+time+'</div><div class="alarm-days">'+days+'</div></div><button class="btn btn-danger btn-sm" onclick="delAlarm(\''+time+'\')">删除</button>';
           list.appendChild(item);
         }
       }else{list.innerHTML='<div class="alarm-empty">暂无闹钟，点击右上角添加</div>';}
