@@ -1,0 +1,548 @@
+# 使用 Golang 重构的 工作咩闹钟  
+<img width="240" height="240" src="https://github.com/user-attachments/assets/de4e9f0b-16ed-4e68-a8eb-b9f039b12f64" />
+
+原项目是 [工作日闹钟](https://github.com/zanjie1999/workdayAlarmClock)，从2017年用Python2写出来后，使用Python3重构，现在使用Golang重构，最大的原因是想适配Android  
+
+本闹钟可以在设定的时间（支持中国法定节假日），从设定的网抑云歌单中随机抽取多首音乐作为闹钟铃声，可以自定义闹钟时长  
+另外可以作为网抑云音乐播放器使用，随机播放永不重复，实现除语音助手外的智能音响应有的功能  
+
+这是一个服务端程序，交互将通过8080端口的Web服务在浏览器完成，尽量减少ram占用，以便运行在骁龙210的随身WiFi上（包括Android端仅占用47M的Ram），使用蓝牙音响播放闹钟声音
+
+<img width="766" height="944"  src="https://github.com/user-attachments/assets/1674c248-de45-44a3-9696-8791179c0667" />
+
+这个程序将解决传统闹钟的几个问题：
+1. 在节假日调休的情况下，该响的时候不响不该响的时候响
+2. 闹钟铃声千篇一律，天天一样，容易听腻
+3. 闹钟时间不够长，声音不够大，容易睡过头
+4. 小爱音响断网后闹钟不会响
+5. 闹钟随机音乐不能放我喜欢的歌
+6. 随机播放重复概率过高
+7. 无法设置指定日期的闹钟
+8. 无大小周支持
+
+## 如何使用
+#### 如果你想在没有nohup的系统下在后台运行，你需要这样启动，不然会被系统杀掉
+```
+./workdayAlarmClock-linux-arm </dev/null >/dev/null 2>&1 &
+```
+
+
+Android使用 [App](https://github.com/zanjie1999/workdayAlarmClockAndroid)  
+
+Linux 的 CGO 构建会优先使用直接 ALSA；纯 Go 构建使用 ALSA 的 `aplay`，找不到时自动回退到 TinyALSA 的 `tinyplay`。程序会流式解码 MP3。
+
+使用 `CGO_ENABLED=1` 在 Linux 上编译时，如果检测到 `libasound.so.2` 和 `/dev/snd/pcmC*D*p`，程序会默认直接调用 ALSA 播放和调节音量，不需要 `aplay`、`amixer`。编译环境需要 ALSA 开发头文件和库：
+```
+CGO_ENABLED=1 go build
+```
+没有 ALSA 开发环境时，使用默认的纯 Go 构建，程序会继续使用 `aplay` 或 `tinyplay`。
+
+如需强制使用 TinyALSA，可以在启动时指定 `tinyplay` 或其完整路径：
+```
+./workdayAlarmClock-linux-arm tinyplay
+# 或
+./workdayAlarmClock-linux-arm /usr/bin/tinyplay
+```
+
+Buildroot 使用 TinyALSA 时需要启用库和工具：
+```
+BR2_PACKAGE_TINYALSA=y
+BR2_PACKAGE_TINYALSA_TOOLS=y
+```
+TinyALSA 使用默认声卡和设备 `0,0`，并要求 `tinyplay`、`tinymix` 采用 TinyALSA 2.0.0 的命令行语法。目标声卡需要原生支持音频文件的采样率，因为 TinyALSA 不负责重采样。
+
+Kindle 使用系统自带的 GStreamer 播放，程序会直接将解码后的 PCM 交给 `/usr/bin/gst-launch` 和 `mixersink`，不需要安装播放器，音量由 Kindle 系统管理。
+
+其他平台也可以使用 [meMp3Player](https://github.com/zanjie1999/meMp3Player) 作为播放器使用。
+即这样启动 `workdayAlarmClock 你的播放器路径`  
+比如 `workdayAlarmClock ./meMp3Player`
+
+也可以安装 sox，或者使用你喜欢的播放器。  
+Linux: `包管理器比如apt或者yum等 install sox`  
+macOS: `brew install sox`  
+
+Windows随便找个播放器基本都能用，比如`meMp3Player`，需要播放时阻塞，放完自动退出的那种
+Windows：这样启动 `workdayAlarmClock 你的播放器路径`  
+
+暂停支持 Android、Linux ALSA 和 Kindle；音量控制支持 Android 与 Linux ALSA，Kindle 使用系统音量
+
+打开同局域网任意设备的浏览器，访问 `http://你的设备ip地址:8080`  
+点击 闹钟设置 根据说明进行设置  
+对浏览器没有要求，ie5即使关闭js也能实现基础的功能  
+另外有关于指定日期闹钟的设置，你可以使用半角逗号`,`进行分隔，一次性输入多个日期，比如，8月3日和12月11日，就输入`0803,1211`  
+
+因v13修改了闹钟存储方式来支持同时间多闹钟，以及指定日期闹钟，你可根据当月排班来设置闹钟，因此从低版本更新到v13之后的版本，需要手动删除所有闹钟再更新
+
+v18.5开始允许在默认歌单和闹钟歌单id的位置输入流媒体的URL，比如你可以输入一个当地新闻广播的流媒体地址，让每天早上的闹钟播放的是当地的新闻
+
+## 指令
+除了直接在shell输入，还可以直接在访问地址后拼接，使用GET请求调用，如 `http://127.0.0.1:8080/1key`
+```shell
+# 停止播放
+stop
+# 暂停
+pause
+# 恢复播放
+resume
+# 播放URL
+play URL
+# 切换暂停、恢复
+play
+# 设置音量
+vol 数字
+# 音量加
+volp
+# 音量减
+volm
+# 下一首
+next
+# 上一首
+prev
+# 退出
+exit
+# 一键播放歌单、停止
+1key
+# 定时停止
+stop 分钟数
+# 播放歌单id
+playlist 7668635210
+# 播放歌曲
+playmusic 2604307454
+# 测试闹钟
+testalarm
+# 创建文件
+touch 文件名
+# 删除文件
+rm 文件名
+# 设置缓存路径 路径为null则关闭，不传则输出当前值
+savepath 路径
+# 获取ip地址
+ip
+```
+
+### 关于“上一首”按钮的特殊说明
+在没有播放记录时，会播放设置的默认歌单，再按一次则随机播放  
+在有播放记录时，会播放上一首，再按一次播放设置的默认歌单，再按一次则随机播放  
+在Android支持多媒体物理按键控制，逻辑相同  
+其中一说宝宝的鼻子是停止按钮，叮咚play的勿扰按钮短按暂停长按停止
+
+
+### 天气播报
+会在每次闹钟停止后（手动停止或播放完自动停止），播报今天的天气和前一天的温度差，以便决定穿什么衣服  
+你需要手动在闹钟设置中输入天气代码的框中输入你的区/市，并点击右边的查询按钮，保存设置后尝试点击“测试获取天气”来检查是否能正常使用  
+因配额资源有限，请勿将我的语音合成api用于其他用途，谢谢合作，否则将会取消这一功能
+
+### 音频缓存
+可以在没有网络的时候播放之前播放过的歌曲  
+设置了缓存目录后，并且重启启动后，可以在 `/music` 对缓存进行浏览  
+歌单会优先使用网络的，歌曲则会优先播放缓存的，在切换音质后需要清理缓存才能播放目标音质的音频  
+另外增加了 `/sdcard` 路径，用于访问Android设备的sdcard中的文件  
+
+### 全屋同步播放
+实现了一个很酷的功能，可以让局域网所有工作咩闹钟设备同时放一样的音乐，也可以叫UDP广播群控  
+只需要在闹钟设置中想作为主机的设备上勾选 `全屋同步播放主机` 即刻  
+由于配置不一样的配置的设备处理的速度不一样，所以你可能需要在闹钟设置中配置 `同步偏移`  
+单位是ms毫秒（1秒=1000毫秒），数字越大，将越早开始播放，数字越小（可以为负数）  
+说小米垃圾是有原因的，os1系统的k60pro播放音频的速度居然比骁龙625 miui10的红米note4x还慢了710ms  
+
+### 睡过头检测（米家设备联动 + Bark推送）
+在闹钟设置页新增「米家设备 & 睡过头检测」功能：
+1. **米家登录**：输入米家账号密码登录，自动获取家庭和设备列表（参考 [MiWu](https://github.com/sky130/MiWu) 开源米家客户端实现）
+2. **选择设备**：下拉选择家和要监控的设备（如空调），保留家/设备两级选择
+3. **工作时间区间**：配置工作时间段（如 09:00~18:00），可选择仅工作日检测
+4. **睡过头判定**：在工作区间内，如果被监控设备仍处于开启状态（认为睡过头/忘关空调），闹钟持续不断响铃，并通过 Bark 推送手机通知提醒关闭设备
+5. **音量渐强**：持续响铃未获回应时，音量按配置的间隔和幅度逐渐增大（起始音量、每次增加量、间隔秒数、最大音量均可详细配置）
+6. **立即停止**：设备一旦关闭，响铃立刻停止；也可手动停止
+
+Bark 推送链接格式：`https://api.day.app/你的key`，可在设置中配置通知间隔避免刷屏。
+
+相关 HTTP 接口：
+- `/mi/login?user=账号&pass=密码` 米家登录
+- `/mi/homes` 获取家庭列表
+- `/mi/devices?homeId=xx&owner=xx` 获取设备列表
+- `/mi/devicestatus?did=xx` 查询设备开关状态
+- `/oversleep/status` 睡过头检测状态
+- `/oversleep/test` 模拟睡过头响铃
+- `/oversleep/stop` 停止响铃
+- `/oversleep/check` 立即执行一次检查
+
+## 特殊设备适配
+### 作业帮w80博学版等Linux词典笔
+先用`connmanctl`把wifi连一下  
+```
+enable wifi
+agent on
+scan wifi
+services
+# 会输出扫描到的wifi
+connect 复制名字右侧那串
+# 输入密码按回车就连上了
+quit
+```
+下载直接运行`workdayAlarmClock-linux-arm`就可以
+```
+mkdir /home/root/workdayAlarmClock
+cd /home/root/workdayAlarmClock
+curl -L -o workdayAlarmClock-linux-arm https://github.com/zanjie1999/workdayAlarmClockGo/releases/latest/download/workdayAlarmClock-linux-arm
+chmod +x workdayAlarmClock-linux-arm
+./workdayAlarmClock-linux-arm
+# 输入exit可以退出
+```
+增加开机启动
+```
+mount -o rw,remount /
+printf '%s\n' \
+'#!/bin/sh' \
+'case "$1" in' \
+'  start)' \
+'    cd /home/root/workdayAlarmClock || exit 1' \
+'    start-stop-daemon --start --background --exec /home/root/workdayAlarmClock/workdayAlarmClock-linux-arm' \
+'    ;;' \
+'  stop)' \
+'    start-stop-daemon --stop --exec /home/root/workdayAlarmClock/workdayAlarmClock-linux-arm' \
+'    ;;' \
+'esac' \
+'exit 0' \
+> /etc/init.d/workdayAlarmClock
+
+chmod +x /etc/init.d/workdayAlarmClock
+ln -s /etc/init.d/workdayAlarmClock /etc/rcS.d/S90workdayAlarmClock
+# 然后就可以用 /etc/init.d/workdayAlarmClock start 来启动了
+```
+
+### Kindle
+下载方式同上，运行命令不一样
+```
+./workdayAlarmClock-linux-arm kindle
+```
+
+### AKU音箱
+先配置好网络  
+```
+cat << SPARKLE > /etc/wifi/wpa_supplicant.conf
+ctrl_interface=/etc/wifi/sockets
+update_config=1
+country=US
+
+network={
+    ssid="wifi名字纯英文"
+    psk="wifi密码"
+    key_mgmt=WPA-PSK
+}
+SPARKLE
+
+# 开机连wifi
+sed -i '/^exit 0/i \ifconfig wlan0 up; wpa_supplicant -B -i wlan0 -c /etc/wifi/wpa_supplicant.conf; udhcpc -i wlan0 &' /etc/rc.local
+
+```
+
+下载并添加到开机启动  
+
+首先你需要先在Releases手动下载 `workdayAlarmClock-linux-arm`
+然后在adb shell中运行
+```
+mkdir /root/workdayAlarmClock
+```
+
+开个cmd或者终端,不要adb shell
+```
+adb push 把下载的文件拖进来 /root/workdayAlarmClock/workdayAlarmClock-linux-arm
+```
+
+回去继续
+```
+chmod +x /root/workdayAlarmClock/workdayAlarmClock-linux-arm
+
+cat << SPARKLE > /root/workdayAlarmClock/start.sh
+#!/bin/sh
+cd /root/workdayAlarmClock
+./workdayAlarmClock-linux-arm </dev/null >/dev/null 2>&1 &
+SPARKLE
+
+chmod +x /root/workdayAlarmClock/start.sh
+
+# 加到开机启动
+sed -i '/^exit 0/i /root/workdayAlarmClock/start.sh' /etc/rc.local
+
+# 直接启动
+/root/workdayAlarmClock/start.sh
+```
+
+让音量键可以调音量，因为太反人类了右边做成了音量加，暂停再按可以切歌
+```
+cat << 'SPARKLE' > /root/workdayAlarmClock/volKey.sh
+#!/bin/sh
+while true; do
+    HEX=$(dd if=/dev/input/event1 bs=16 count=1 2>/dev/null | hexdump -v -e '16/1 "%02x "')
+    case "$HEX" in
+        *"01 00 72 00 01 00 00 00"*)
+            wget -qO- 127.0.0.1:8080/volpn >/dev/null 2>&1 || amixer set Master 5%+ >/dev/null 2>&1
+            ;;
+        *"01 00 73 00 01 00 00 00"*)
+            wget -qO- 127.0.0.1:8080/volmp >/dev/null 2>&1 || amixer set Master 5%- >/dev/null 2>&1
+            ;;
+    esac
+done
+SPARKLE
+
+chmod +x /root/workdayAlarmClock/volKey.sh
+sed -i '/^exit 0/i /root/workdayAlarmClock/volKey.sh &' /etc/rc.local
+```
+
+顶部按键实现1key
+```
+cat << 'SPARKLE' > /root/workdayAlarmClock/pwrKey.sh
+#!/bin/sh
+while true; do
+    HEX=$(dd if=/dev/input/event0 bs=16 count=1 2>/dev/null | hexdump -v -e '16/1 "%02x "')
+    case "$HEX" in
+        *"01 00 74 00 01 00 00 00"*)
+            wget -qO- 127.0.0.1:8080/play >/dev/null 2>&1 
+            ;;
+    esac
+done
+SPARKLE
+
+chmod +x /root/workdayAlarmClock/pwrKey.sh
+sed -i '/^exit 0/i /root/workdayAlarmClock/volKey.sh &' /etc/rc.local
+```
+
+屏幕显示时间  
+<details>
+<summary>纯shell暴力实现, 有点长, 点击展开</summary>
+
+```
+cat << 'SPARKLE' > /root/workdayAlarmClock/timeDisplay.sh
+#!/bin/sh
+
+FB=/dev/fb0
+
+LC_ALL=C
+export LC_ALL
+
+draw_time() {
+    TIME_TEXT=$1
+
+    awk -v value="$TIME_TEXT" '
+    BEGIN {
+        mask["0"] = "abcdef"
+        mask["1"] = "bc"
+        mask["2"] = "abdeg"
+        mask["3"] = "abcdg"
+        mask["4"] = "bcfg"
+        mask["5"] = "acdfg"
+        mask["6"] = "acdefg"
+        mask["7"] = "abc"
+        mask["8"] = "abcdefg"
+        mask["9"] = "abcdfg"
+
+        # 128x320 framebuffer包含两个128x160页面
+        for (py = 0; py < 160; py++) {
+            row = ""
+            page_y = py % 160
+
+            for (px = 0; px < 128; px++) {
+                on = 0
+
+                # 每行只使用前120个像素
+                if (px < 120) {
+                    # 物理120x160旋转为视觉160x120
+                    x = 159 - page_y
+                    y = px
+                    on = clock_pixel(x, y, value)
+                }
+
+                if (on)
+                    row = row "\\377\\377\\377"
+                else
+                    row = row "\\000\\000\\000"
+            }
+
+            print row
+        }
+    }
+
+    function clock_pixel(x, y, text, n, dx, dy, digit) {
+        # 冒号的两个方块点
+        if (x >= 77 && x < 84) {
+            if ((y >= 40 && y < 47) ||
+                (y >= 73 && y < 80))
+                return 1
+        }
+
+        # 四个数字
+        if (x >= 8 && x < 35) {
+            n = 0
+            dx = x - 8
+        } else if (x >= 39 && x < 66) {
+            n = 1
+            dx = x - 39
+        } else if (x >= 94 && x < 121) {
+            n = 2
+            dx = x - 94
+        } else if (x >= 125 && x < 152) {
+            n = 3
+            dx = x - 125
+        } else {
+            return 0
+        }
+
+        dy = y - 18
+
+        if (dy < 0 || dy >= 84)
+            return 0
+
+        digit = substr(text, n + 1, 1)
+        return digit_pixel(dx, dy, mask[digit])
+    }
+
+    function digit_pixel(x, y, segments) {
+        width = 27
+        height = 84
+        thick = 5
+        middle = 39
+
+        if (index(segments, "a") &&
+            y < thick &&
+            x >= thick && x < width - thick)
+            return 1
+
+        if (index(segments, "b") &&
+            x >= width - thick &&
+            y >= thick && y < middle)
+            return 1
+
+        if (index(segments, "c") &&
+            x >= width - thick &&
+            y >= middle + thick && y < height - thick)
+            return 1
+
+        if (index(segments, "d") &&
+            y >= height - thick &&
+            x >= thick && x < width - thick)
+            return 1
+
+        if (index(segments, "e") &&
+            x < thick &&
+            y >= middle + thick && y < height - thick)
+            return 1
+
+        if (index(segments, "f") &&
+            x < thick &&
+            y >= thick && y < middle)
+            return 1
+
+        if (index(segments, "g") &&
+            y >= middle && y < middle + thick &&
+            x >= thick && x < width - thick)
+            return 1
+
+        return 0
+    }
+    ' |
+    while IFS= read -r ROW; do
+        printf '%b' "$ROW"
+    done > "$FB"
+}
+
+while true; do
+    CURRENT_TIME=$(date +%I%M)
+    draw_time "$CURRENT_TIME"
+
+    NOW=$(date +%s)
+    sleep $((60 - NOW % 60))
+done
+SPARKLE
+
+chmod +x /root/workdayAlarmClock/timeDisplay.sh
+sed -i '/^exit 0/i nice -n 19 /root/workdayAlarmClock/timeDisplay.sh &' /etc/rc.local
+/root/workdayAlarmClock/timeDisplay.sh &
+```
+</details>
+
+
+### 任你说DSVD(移动定制小度小屏音箱)
+他没有aplay和amixer，于是我改了下加了直接用cgo调用alsa的功能，编译环境非常复杂，编译了11次，弄了一晚上终于成功了
+联网
+```
+cat << SPARKLE > /etc/wifi/wpa_supplicant.conf
+ctrl_interface=/var/run/wpa_supplicant
+update_config=1
+country=GB
+
+network={
+ssid="名称"
+psk="密码"
+key_mgmt=WPA-PSK
+}
+SPARKLE
+sync
+reboot
+
+```
+等他重启完wifi就连上了  
+
+补全alsa (之前是直接带alsa支持编译,发现更新太麻烦了,那不如给他补全了)
+```
+wget -O /usr/bin/aplay https://github.com/zanjie1999/workdayAlarmClockGo/releases/download/29.3/aplay
+chmod +x /usr/bin/aplay
+```
+
+下载安装
+```
+mkdir /usr/data/workdayAlarmClock
+wget -O /usr/data/workdayAlarmClock/workdayAlarmClock-linux-mipsle https://github.com/zanjie1999/workdayAlarmClockGo/releases/latest/download/workdayAlarmClock-linux-mipsle
+chmod +x /usr/data/workdayAlarmClock/workdayAlarmClock-linux-mipsle
+```
+
+顶部按键实现1key
+```
+cat << 'SPARKLE' > /usr/data/workdayAlarmClock/playKey.sh
+#!/bin/sh
+while true; do
+    HEX=$(dd if=/dev/input/event0 bs=16 count=1 2>/dev/null | hexdump -v -e '16/1 "%02x "')
+    case "$HEX" in
+        *"01 00 67 00 01 00 00 00"*)
+            wget -qO- 127.0.0.1:8080/play >/dev/null 2>&1 
+            ;;
+        *"01 00 a9 00 01 00 00 00"*)
+            wget -qO- 127.0.0.1:8080/1key >/dev/null 2>&1 
+            ;;
+        *"01 00 73 00 01 00 00 00"*)
+            wget -qO- 127.0.0.1:8080/volpn >/dev/null 2>&1 
+            ;;
+        *"01 00 72 00 01 00 00 00"*)
+            wget -qO- 127.0.0.1:8080/volmp >/dev/null 2>&1 
+            ;;
+    esac
+done
+SPARKLE
+
+chmod +x /usr/data/workdayAlarmClock/playKey.sh
+```
+
+加到开机启动  
+其中 `echo 10 > /sys/class/backlight/pwm-backlight.0/brightness` 是调亮度的, 最大255   
+```
+printf '%s\n' \
+'#!/bin/sh' \
+'case "$1" in' \
+'  start)' \
+'    cd /usr/data/workdayAlarmClock || exit 1' \
+'    /usr/data/workdayAlarmClock/playKey.sh &' \
+'    echo 10 > /sys/class/backlight/pwm-backlight.0/brightness' \
+'    start-stop-daemon --start --background --exec /usr/data/workdayAlarmClock/workdayAlarmClock-linux-mipsle' \
+'    ;;' \
+'  stop)' \
+'    start-stop-daemon --stop --exec /usr/data/workdayAlarmClock/workdayAlarmClock-linux-mipsle' \
+'    ;;' \
+'esac' \
+'exit 0' \
+> /etc/init.d/S99workdayAlarmClock
+
+chmod +x /etc/init.d/S99workdayAlarmClock
+```
+
+### 协议 咩License
+使用此项目视为您已阅读并同意遵守 [此LICENSE](https://github.com/zanjie1999/LICENSE)   
+Using this project is deemed to indicate that you have read and agreed to abide by [this LICENSE](https://github.com/zanjie1999/LICENSE)   

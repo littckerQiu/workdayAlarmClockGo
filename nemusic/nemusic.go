@@ -1,0 +1,243 @@
+/*
+ * 往抑云
+ * zyyme 20230630
+ * v1.0
+ */
+
+package nemusic
+
+import (
+	"encoding/gob"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+	"time"
+	"workdayAlarmClock/app"
+	"workdayAlarmClock/conf"
+
+	"github.com/zanjie1999/httpme"
+)
+
+type nextMusicSongRequest struct {
+	ID        string `json:"id"`
+	Level     string `json:"level"`
+	Timestamp int64  `json:"timestamp"`
+	IP        string `json:"ip"`
+}
+
+type nextMusicIPRequest struct {
+	Timestamp int64 `json:"timestamp"`
+}
+
+type nextMusicIPData struct {
+	IP string `json:"ip"`
+}
+
+type nextMusicIPResponse struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    nextMusicIPData `json:"data"`
+}
+
+type nextMusicSongData struct {
+	URL string `json:"url"`
+}
+
+type nextMusicSongResponse struct {
+	Code    int               `json:"code"`
+	Message string            `json:"message"`
+	Data    nextMusicSongData `json:"data"`
+}
+
+// 歌单列表                歌单id   歌单名  是否缓存
+func PlayList(id string) ([]string, string, bool) {
+	req := httpme.Httpme()
+	resp, err := req.Get("http://music.163.com/api/v6/playlist/detail?n=0&id=" + id)
+	if err == nil {
+		var j map[string]interface{}
+		resp.Json(&j)
+		if j["code"].(float64) != 200 {
+			log.Println("获取歌单信息出错", j["code"], j["message"])
+			return []string{}, j["message"].(string), false
+		}
+		tids := j["playlist"].(map[string]interface{})["trackIds"].([]interface{})
+		ids := make([]string, len(tids))
+		for i, v := range tids {
+			ids[i] = fmt.Sprintf("%.0f", v.(map[string]interface{})["id"].(float64))
+		}
+		if conf.Cfg.SavePath != "" {
+			// 保存本地缓存
+			file, err := os.Create(conf.Cfg.SavePath + id + ".list")
+			if err != nil {
+				log.Println("创建歌单缓存文件失败", err)
+			} else {
+				gob.NewEncoder(file).Encode(ids)
+			}
+			file.Close()
+		}
+		return ids, j["playlist"].(map[string]interface{})["name"].(string), false
+	}
+	log.Println("获取歌单信息出错", err)
+	if conf.Cfg.SavePath != "" {
+		file, err := os.Open(conf.Cfg.SavePath + id + ".list")
+		if err == nil {
+			log.Println("使用缓存")
+			var ids []string
+			gob.NewDecoder(file).Decode(&ids)
+			return ids, "缓存", true
+		} else {
+			log.Println("没有缓存", err)
+		}
+	}
+	return []string{}, "无法播放", false
+}
+
+// 获取音乐播放地址 不一定能放先检查下
+func MusicUrl(id string) string {
+	req := httpme.Httpme()
+	var url = ""
+	// 本地缓存
+	if conf.Cfg.SavePath != "" {
+		if stat, err := os.Stat(conf.Cfg.SavePath + id + ".mp3"); err == nil && stat.Size() > 0 {
+			log.Println("播放缓存", url)
+			return conf.Cfg.SavePath + id + ".mp3"
+		}
+	}
+	if conf.Cfg.MusicQuality == "" {
+		conf.Cfg.MusicQuality = "standard"
+	}
+	var err error
+	if conf.Cfg.MusicQuality == "standard" {
+		// 带这个ua可以放10秒，但没有任何意义
+		// resp, err := req.Get("https://music.163.com/song/media/outer/url?id="+id, httpme.Header{"User-Agent": "stagefright/1.2 (Linux;Android 7.0)"})
+		var resp *httpme.Response
+		resp, err = req.Get("https://music.163.com/song/media/outer/url?id=" + id)
+		if err == nil {
+			resp.R.Body.Close()
+			if resp.R.Request.URL.Path != "/404" {
+				// 302后cdn的地址，时间长会过期
+				url = resp.R.Request.URL.String()
+			} else {
+				log.Println("需要VIP", id)
+			}
+		} else {
+			log.Println("检查歌曲是否可用出错", err)
+		}
+	}
+	// 如果err有值则网络异常
+	if url == "" && err == nil {
+		log.Println("获取地址 音质", conf.Cfg.MusicQuality)
+		// 使用第三方尝试解析vip
+		url, err = nextMusicSongURL(req, id, conf.Cfg.MusicQuality)
+		if err == nil {
+			if url == "" {
+				log.Println("使用接口获取歌曲地址解析出错")
+			} else {
+				log.Println("使用接口获取歌曲地址成功")
+			}
+		} else {
+			// 因为有时候会失败 第二次又好了
+			if strings.Contains(err.Error(), "Song not found") {
+				log.Println("重试一次")
+				time.Sleep(time.Second)
+				url, err = nextMusicSongURL(req, id, conf.Cfg.MusicQuality)
+			}
+			if err != nil {
+				log.Println("使用接口获取歌曲地址出错", err)
+			}
+		}
+	}
+	if conf.Cfg.SavePath != "" && url != "" {
+		// 下载用时较长，先暂停
+		if conf.IsApp {
+			app.SendLocal("PAUSE")
+		}
+		// 缓存
+		log.Println("开始下载到", conf.Cfg.SavePath+id+".mp3")
+		resp, err := httpme.Get(url)
+		if err != nil {
+			log.Println("下载出错", err)
+		} else {
+			err = resp.SaveFile(conf.Cfg.SavePath + id + ".mp3")
+			if err != nil {
+				log.Println("保存出错", err)
+			} else {
+				url = conf.Cfg.SavePath + id + ".mp3"
+			}
+		}
+	}
+	return url
+}
+
+// 下载歌单缓存
+func PlaylistDownload(id string) {
+	if conf.Cfg.SavePath == "" {
+		log.Println("你还没配置缓存目录")
+		return
+	}
+	ids, name, _ := PlayList(id)
+	log.Println("开始下载列表", id, name)
+	for i, v := range ids {
+		log.Println(len(ids), "/", i+1, v)
+		MusicUrl(v)
+	}
+}
+
+func nextMusicSongURL(req *httpme.Request, id string, level string) (string, error) {
+	headers := httpme.Header{
+		"Accept":          "*/*",
+		"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7",
+		"DNT":             "1",
+		"Origin":          "https://wyapi.toubiec.cn",
+		"Sec-Fetch-Dest":  "empty",
+		"Sec-Fetch-Mode":  "cors",
+		"Sec-Fetch-Site":  "same-site",
+	}
+
+	resp, err := req.PostJson("https://nextmusic.toubiec.cn/api/ip", nextMusicIPRequest{
+		Timestamp: time.Now().UnixMilli(),
+	}, headers)
+	if err != nil {
+		return "", fmt.Errorf("ip请求失败: %w", err)
+	}
+
+	var ipResponse nextMusicIPResponse
+	if err := resp.Json(&ipResponse); err != nil {
+		return "", fmt.Errorf("ip响应解析失败: %w", err)
+	}
+	if ipResponse.Code != 200 {
+		if ipResponse.Message == "" {
+			ipResponse.Message = resp.Text()
+		}
+		return "", fmt.Errorf("ip接口返回异常: %s", ipResponse.Message)
+	}
+	if ipResponse.Data.IP == "" {
+		return "", fmt.Errorf("ip接口未返回IP地址")
+	}
+
+	resp, err = req.PostJson("https://nextmusic.toubiec.cn/api/getSongUrl", nextMusicSongRequest{
+		ID:        id,
+		Level:     level,
+		Timestamp: time.Now().UnixMilli(),
+		IP:        ipResponse.Data.IP,
+	}, headers)
+	if err != nil {
+		return "", fmt.Errorf("getSongUrl请求失败: %w", err)
+	}
+
+	var j nextMusicSongResponse
+	if err := resp.Json(&j); err != nil {
+		return "", fmt.Errorf("getSongUrl响应解析失败: %w", err)
+	}
+	if j.Code != 200 {
+		if j.Message == "" {
+			j.Message = resp.Text()
+		}
+		return "", fmt.Errorf("getSongUrl接口返回异常: %s", j.Message)
+	}
+	if j.Data.URL == "" {
+		return "", fmt.Errorf("getSongUrl接口未返回歌曲地址")
+	}
+	return j.Data.URL, nil
+}

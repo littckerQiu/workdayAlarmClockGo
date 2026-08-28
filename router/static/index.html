@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0e27">
+<title>闹钟</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;width:100%;overflow-x:hidden;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:#0a0e27;
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(99,102,241,0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(236,72,153,0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(59,130,246,0.1) 0%, transparent 70%);
+  color:#e8eaf6;
+  display:-webkit-box;display:-webkit-flex;display:flex;
+  -webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;
+  -webkit-box-align:center;-webkit-align-items:center;align-items:center;
+  -webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;
+  min-height:100vh;
+  padding:20px;
+  position:relative;
+}
+.bg-particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden;}
+.particle{position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);-webkit-animation:float linear infinite;animation:float linear infinite;}
+@-webkit-keyframes float{0%{-webkit-transform:translateY(100vh) scale(0);opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{-webkit-transform:translateY(-10vh) scale(1);opacity:0;}}
+@keyframes float{0%{transform:translateY(100vh) scale(0);opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{transform:translateY(-10vh) scale(1);opacity:0;}}
+
+.container{position:relative;z-index:1;width:100%;max-width:520px;text-align:center;}
+
+.clock-wrap{margin-bottom:8px;-webkit-animation:fadeInDown 0.8s ease-out;animation:fadeInDown 0.8s ease-out;}
+.date-text{font-size:16px;color:rgba(232,234,246,0.6);letter-spacing:2px;margin-bottom:4px;font-weight:300;}
+.time-display{font-size:72px;font-weight:200;letter-spacing:4px;line-height:1.1;
+  background:linear-gradient(135deg,#fff 0%,#a5b4fc 50%,#f0abfc 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:0 0 40px rgba(99,102,241,0.3);
+  font-variant-numeric:tabular-nums;
+}
+.time-display .colon{-webkit-animation:blink 1s ease-in-out infinite;animation:blink 1s ease-in-out infinite;}
+@-webkit-keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.week-text{font-size:14px;color:rgba(232,234,246,0.5);letter-spacing:3px;margin-top:2px;}
+
+.card{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px;
+  padding:20px 24px;
+  margin:12px 0;
+  -webkit-transition:all 0.4s cubic-bezier(0.4,0,0.2,1);transition:all 0.4s cubic-bezier(0.4,0,0.2,1);
+  -webkit-animation:fadeInUp 0.8s ease-out;animation:fadeInUp 0.8s ease-out;
+  position:relative;overflow:hidden;
+}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);}
+.card:hover{-webkit-transform:translateY(-2px);transform:translateY(-2px);background:rgba(255,255,255,0.09);}
+.card-label{font-size:12px;color:rgba(232,234,246,0.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.card-value{font-size:24px;font-weight:300;color:#fff;}
+
+.alarm-status{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;gap:10px;}
+.alarm-icon{width:36px;height:36px;border-radius:50%;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;font-size:18px;}
+.alarm-icon.active{background:rgba(239,68,68,0.2);-webkit-animation:pulse 2s ease-in-out infinite;animation:pulse 2s ease-in-out infinite;}
+.alarm-icon.idle{background:rgba(34,197,94,0.15);}
+@-webkit-keyframes pulse{0%,100%{-webkit-transform:scale(1);}50%{-webkit-transform:scale(1.08);}}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+
+.oversleep-alert{
+  background:linear-gradient(135deg,rgba(239,68,68,0.2) 0%,rgba(220,38,38,0.15) 100%);
+  border:1px solid rgba(239,68,68,0.4);
+  border-radius:20px;padding:24px;margin:12px 0;
+  display:none;
+}
+.oversleep-alert.show{display:block;-webkit-animation:fadeInUp 0.5s ease-out,alertGlow 2s ease-in-out 0.5s infinite;animation:fadeInUp 0.5s ease-out,alertGlow 2s ease-in-out 0.5s infinite;}
+@-webkit-keyframes alertGlow{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.3);}50%{box-shadow:0 0 30px 5px rgba(239,68,68,0.25);}}
+@keyframes alertGlow{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.3);}50%{box-shadow:0 0 30px 5px rgba(239,68,68,0.25);}}
+.alert-title{font-size:20px;font-weight:600;color:#fca5a5;margin-bottom:6px;}
+.alert-desc{font-size:14px;color:rgba(252,165,165,0.8);margin-bottom:16px;}
+.alert-vol{font-size:13px;color:rgba(252,165,165,0.7);margin-bottom:14px;}
+
+.btn{
+  display:inline-block;border:none;border-radius:14px;padding:14px 32px;
+  font-size:16px;font-weight:500;cursor:pointer;letter-spacing:1px;
+  -webkit-transition:all 0.3s cubic-bezier(0.4,0,0.2,1);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+  font-family:inherit;
+}
+.btn:active{-webkit-transform:scale(0.96);transform:scale(0.96);}
+.btn-danger{background:linear-gradient(135deg,#ef4444 0%,#dc2626 100%);color:#fff;box-shadow:0 4px 20px rgba(239,68,68,0.4);}
+.btn-danger:hover{box-shadow:0 6px 28px rgba(239,68,68,0.5);}
+
+.btn-settings{
+  position:fixed;top:20px;right:20px;z-index:10;
+  width:44px;height:44px;border-radius:50%;
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
+  display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;
+  cursor:pointer;color:#e8eaf6;font-size:20px;
+  -webkit-transition:all 0.3s ease;transition:all 0.3s ease;
+  -webkit-animation:fadeInRight 0.8s ease-out;animation:fadeInRight 0.8s ease-out;
+}
+.btn-settings:hover{-webkit-transform:rotate(90deg);transform:rotate(90deg);background:rgba(255,255,255,0.12);}
+
+.vol-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:12px;margin-top:12px;}
+.vol-slider{-webkit-flex:1;flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:rgba(255,255,255,0.15);outline:none;}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#818cf8,#a78bfa);cursor:pointer;box-shadow:0 2px 8px rgba(129,140,248,0.5);}
+.vol-val{font-size:14px;color:rgba(232,234,246,0.7);min-width:36px;text-align:right;font-variant-numeric:tabular-nums;}
+
+@-webkit-keyframes fadeInDown{from{opacity:0;-webkit-transform:translateY(-20px);}to{opacity:1;-webkit-transform:translateY(0);}}
+@keyframes fadeInDown{from{opacity:0;transform:translateY(-20px);}to{opacity:1;transform:translateY(0);}}
+@-webkit-keyframes fadeInUp{from{opacity:0;-webkit-transform:translateY(20px);}to{opacity:1;-webkit-transform:translateY(0);}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@-webkit-keyframes fadeInRight{from{opacity:0;-webkit-transform:translateX(20px);}to{opacity:1;-webkit-transform:translateX(0);}}
+@keyframes fadeInRight{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+.stagger-1{-webkit-animation-delay:0.1s;animation-delay:0.1s;opacity:0;-webkit-animation-fill-mode:forwards;animation-fill-mode:forwards;}
+.stagger-2{-webkit-animation-delay:0.25s;animation-delay:0.25s;opacity:0;-webkit-animation-fill-mode:forwards;animation-fill-mode:forwards;}
+.stagger-3{-webkit-animation-delay:0.4s;animation-delay:0.4s;opacity:0;-webkit-animation-fill-mode:forwards;animation-fill-mode:forwards;}
+
+@media(max-width:380px){
+  .time-display{font-size:56px;}
+  .card{padding:16px 18px;}
+  .card-value{font-size:20px;}
+}
+</style>
+</head>
+<body>
+<div class="bg-particles" id="particles"></div>
+
+<div class="btn-settings" onclick="location.href='/alarm.html'" title="设置">&#9881;</div>
+
+<div class="container">
+  <div class="clock-wrap">
+    <div class="date-text" id="dateText">--</div>
+    <div class="time-display"><span id="timeH">00</span><span class="colon">:</span><span id="timeM">00</span><span class="colon">:</span><span id="timeS">00</span></div>
+    <div class="week-text" id="weekText">--</div>
+  </div>
+
+  <div class="card stagger-1">
+    <div class="card-label">下次闹钟</div>
+    <div class="alarm-status">
+      <div class="alarm-icon idle" id="alarmIcon">&#128339;</div>
+      <div class="card-value" id="nextAlarm">无闹钟</div>
+    </div>
+  </div>
+
+  <div class="card stagger-2">
+    <div class="card-label">当前音量</div>
+    <div class="vol-row">
+      <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="50" oninput="changeVol(this.value)">
+      <span class="vol-val" id="volVal">50</span>
+    </div>
+  </div>
+
+  <div class="oversleep-alert" id="oversleepAlert">
+    <div class="alert-title">&#9888; 睡过头警报</div>
+    <div class="alert-desc" id="alertDesc">工作时间内设备仍在运行，持续响铃中</div>
+    <div class="alert-vol" id="alertVol">当前音量: --</div>
+    <button class="btn btn-danger" onclick="stopOversleep()">&#9632; 停止响铃</button>
+  </div>
+
+  <div class="card stagger-3" id="stopCard" style="display:none;">
+    <div class="card-label">闹钟响铃中</div>
+    <button class="btn btn-danger" onclick="stopAlarm()" style="width:100%;margin-top:8px;">&#9632; 停止闹钟</button>
+  </div>
+</div>
+
+<script>
+var weekNames=['周日','周一','周二','周三','周四','周五','周六'];
+var isPlaying=false;
+
+function pad(n){return n<10?'0'+n:''+n;}
+
+function updateClock(){
+  var d=new Date();
+  document.getElementById('timeH').textContent=pad(d.getHours());
+  document.getElementById('timeM').textContent=pad(d.getMinutes());
+  document.getElementById('timeS').textContent=pad(d.getSeconds());
+  document.getElementById('dateText').textContent=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+  document.getElementById('weekText').textContent=weekNames[d.getDay()];
+}
+updateClock();
+setInterval(updateClock,1000);
+
+(function(){
+  var c=document.getElementById('particles');
+  for(var i=0;i<15;i++){
+    var p=document.createElement('div');
+    p.className='particle';
+    var s=Math.random()*4+2;
+    p.style.width=s+'px';p.style.height=s+'px';
+    p.style.left=Math.random()*100+'%';
+    p.style.animationDuration=(Math.random()*15+10)+'s';
+    p.style.animationDelay=(Math.random()*10)+'s';
+    c.appendChild(p);
+  }
+})();
+
+function fetchStatus(){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET','/status',true);
+  xhr.onreadystatechange=function(){
+    if(xhr.readyState===4&&xhr.status===200){
+      try{
+        var d=JSON.parse(xhr.responseText);
+        var playing=d.isAlarm===true||d.isOversleep===true;
+        document.getElementById('stopCard').style.display=playing?'block':'none';
+        if(d.isAlarm===true){
+          document.getElementById('nextAlarm').textContent='闹钟响铃中';
+          document.getElementById('alarmIcon').className='alarm-icon active';
+        }else if(d.isOversleep===true){
+          document.getElementById('nextAlarm').textContent='睡过头警报';
+          document.getElementById('alarmIcon').className='alarm-icon active';
+        }else{
+          document.getElementById('nextAlarm').textContent='待机中';
+          document.getElementById('alarmIcon').className='alarm-icon idle';
+        }
+      }catch(e){}
+    }
+  };
+  xhr.send();
+}
+
+function fetchOversleep(){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET','/oversleep/status',true);
+  xhr.onreadystatechange=function(){
+    if(xhr.readyState===4&&xhr.status===200){
+      try{
+        var d=JSON.parse(xhr.responseText);
+        var alert=document.getElementById('oversleepAlert');
+        if(d.active===true){
+          alert.className='oversleep-alert show';
+          document.getElementById('alertVol').textContent='当前音量: '+(d.currentVol!==undefined?d.currentVol:'--')+'%';
+        }else{
+          alert.className='oversleep-alert';
+        }
+      }catch(e){}
+    }
+  };
+  xhr.send();
+}
+
+function changeVol(v){
+  document.getElementById('volVal').textContent=v;
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET','/vol?vol='+v,true);
+  xhr.send();
+}
+
+function stopAlarm(){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET','/stop',true);
+  xhr.onreadystatechange=function(){if(xhr.readyState===4){fetchStatus();}};
+  xhr.send();
+}
+
+function stopOversleep(){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET','/oversleep/stop',true);
+  xhr.onreadystatechange=function(){if(xhr.readyState===4){fetchOversleep();fetchStatus();}};
+  xhr.send();
+}
+
+fetchStatus();
+fetchOversleep();
+setInterval(fetchStatus,5000);
+setInterval(fetchOversleep,3000);
+</script>
+</body>
+</html>

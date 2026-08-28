@@ -1,0 +1,11 @@
+build
+workdayAlarmClock
+workdayAlarmClock.exe
+.DS_Store
+config.yaml
+__debug_bin
+workdayAlarmClock.json
+music.mp3
+play.mp3
+weather.mp3
+music

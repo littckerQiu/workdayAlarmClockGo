@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0e27">
+<title>闹钟设置</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:#0a0e27;
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(99,102,241,0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(236,72,153,0.15) 0%, transparent 50%);
+  color:#e8eaf6;
+  padding:0 0 100px 0;
+  min-height:100vh;
+}
+.header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(10,14,39,0.85);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  padding:16px 20px;
+  display:-webkit-box;display:-webkit-flex;display:flex;
+  -webkit-box-align:center;-webkit-align-items:center;align-items:center;
+  -webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;
+}
+.header h1{font-size:18px;font-weight:600;letter-spacing:1px;}
+.back-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
+  display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;
+  cursor:pointer;color:#e8eaf6;font-size:16px;text-decoration:none;
+  -webkit-transition:all 0.3s ease;transition:all 0.3s ease;
+}
+.back-btn:hover{background:rgba(255,255,255,0.12);}
+
+.container{max-width:600px;margin:0 auto;padding:20px;}
+
+.section{
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:16px;
+  -webkit-animation:fadeInUp 0.6s ease-out;animation:fadeInUp 0.6s ease-out;
+  -webkit-animation-fill-mode:both;animation-fill-mode:both;
+}
+.section:nth-child(1){-webkit-animation-delay:0.05s;animation-delay:0.05s;}
+.section:nth-child(2){-webkit-animation-delay:0.1s;animation-delay:0.1s;}
+.section:nth-child(3){-webkit-animation-delay:0.15s;animation-delay:0.15s;}
+.section:nth-child(4){-webkit-animation-delay:0.2s;animation-delay:0.2s;}
+.section:nth-child(5){-webkit-animation-delay:0.25s;animation-delay:0.25s;}
+.section-title{
+  font-size:15px;font-weight:600;letter-spacing:1px;
+  margin-bottom:16px;padding-bottom:12px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:8px;
+}
+.section-title .icon{font-size:18px;}
+
+.form-row{
+  display:-webkit-box;display:-webkit-flex;display:flex;
+  -webkit-box-align:center;-webkit-align-items:center;align-items:center;
+  margin-bottom:12px;gap:10px;
+}
+.form-row:last-child{margin-bottom:0;}
+.form-label{font-size:13px;color:rgba(232,234,246,0.7);min-width:80px;flex-shrink:0;}
+.form-input{
+  -webkit-flex:1;flex:1;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px;padding:10px 14px;
+  color:#e8eaf6;font-size:14px;font-family:inherit;
+  -webkit-transition:all 0.3s ease;transition:all 0.3s ease;
+  outline:none;
+}
+.form-input:focus{border-color:rgba(129,140,248,0.5);background:rgba(255,255,255,0.09);box-shadow:0 0 0 3px rgba(129,140,248,0.15);}
+.form-input::placeholder{color:rgba(232,234,246,0.35);}
+select.form-input{cursor:pointer;}
+select.form-input option{background:#1a1f3a;color:#e8eaf6;}
+
+.btn{
+  display:inline-block;border:none;border-radius:12px;padding:10px 20px;
+  font-size:14px;font-weight:500;cursor:pointer;letter-spacing:0.5px;
+  -webkit-transition:all 0.3s cubic-bezier(0.4,0,0.2,1);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+  font-family:inherit;
+}
+.btn:active{-webkit-transform:scale(0.96);transform:scale(0.96);}
+.btn-primary{background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);color:#fff;box-shadow:0 4px 16px rgba(99,102,241,0.35);}
+.btn-primary:hover{box-shadow:0 6px 24px rgba(99,102,241,0.45);}
+.btn-ghost{background:rgba(255,255,255,0.08);color:#e8eaf6;border:1px solid rgba(255,255,255,0.12);}
+.btn-ghost:hover{background:rgba(255,255,255,0.12);}
+.btn-danger{background:linear-gradient(135deg,#ef4444 0%,#dc2626 100%);color:#fff;}
+.btn-sm{padding:6px 14px;font-size:12px;border-radius:8px;}
+
+.alarm-list{margin-bottom:16px;}
+.alarm-item{
+  display:-webkit-box;display:-webkit-flex;display:flex;
+  -webkit-box-align:center;-webkit-align-items:center;align-items:center;
+  -webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;
+  padding:12px 16px;background:rgba(255,255,255,0.04);
+  border-radius:12px;margin-bottom:8px;
+  border:1px solid rgba(255,255,255,0.06);
+  -webkit-transition:all 0.3s ease;transition:all 0.3s ease;
+}
+.alarm-item:hover{background:rgba(255,255,255,0.07);}
+.alarm-time{font-size:20px;font-weight:300;font-variant-numeric:tabular-nums;}
+.alarm-days{font-size:11px;color:rgba(232,234,246,0.5);margin-top:2px;}
+
+.checkbox-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.checkbox-item{
+  display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;
+  gap:5px;padding:6px 12px;background:rgba(255,255,255,0.05);
+  border-radius:8px;border:1px solid rgba(255,255,255,0.08);
+  cursor:pointer;font-size:12px;-webkit-transition:all 0.2s ease;transition:all 0.2s ease;
+}
+.checkbox-item:hover{background:rgba(255,255,255,0.09);}
+.checkbox-item input{cursor:pointer;}
+
+.interval-list{margin-bottom:12px;}
+.interval-item{
+  display:-webkit-box;display:-webkit-flex;display:flex;
+  -webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:8px;
+  margin-bottom:8px;
+  -webkit-animation:fadeIn 0.3s ease;animation:fadeIn 0.3s ease;
+}
+.interval-item .form-input{max-width:100px;text-align:center;}
+.interval-sep{color:rgba(232,234,246,0.4);font-size:14px;}
+.interval-del{
+  width:32px;height:32px;border-radius:8px;border:none;
+  background:rgba(239,68,68,0.15);color:#fca5a5;cursor:pointer;
+  font-size:14px;-webkit-transition:all 0.2s ease;transition:all 0.2s ease;
+  display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;
+}
+.interval-del:hover{background:rgba(239,68,68,0.25);}
+
+.qr-box{
+  text-align:center;padding:20px;background:rgba(255,255,255,0.04);
+  border-radius:16px;margin:12px 0;display:none;
+}
+.qr-box.show{display:block;-webkit-animation:fadeIn 0.4s ease;animation:fadeIn 0.4s ease;}
+#qrCodeImg{display:inline-block;padding:12px;background:#fff;border-radius:12px;}
+.qr-tip{font-size:13px;color:rgba(232,234,246,0.6);margin-top:12px;}
+
+.status-badge{
+  display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;
+}
+.status-ok{background:rgba(34,197,94,0.15);color:#86efac;}
+.status-err{background:rgba(239,68,68,0.15);color:#fca5a5;}
+.status-warn{background:rgba(234,179,8,0.15);color:#fde047;}
+
+.save-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:rgba(10,14,39,0.9);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,0.08);
+  padding:14px 20px;
+  display:-webkit-box;display:-webkit-flex;display:flex;gap:10px;
+}
+.save-bar .btn{-webkit-flex:1;flex:1;padding:14px;font-size:15px;}
+
+.hint{font-size:11px;color:rgba(232,234,246,0.4);margin-top:4px;line-height:1.5;}
+
+@-webkit-keyframes fadeInUp{from{opacity:0;-webkit-transform:translateY(16px);}to{opacity:1;-webkit-transform:translateY(0);}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+@-webkit-keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+.toast{
+  position:fixed;top:50%;left:50%;-webkit-transform:translate(-50%,-50%);transform:translate(-50%,-50%);
+  background:rgba(0,0,0,0.85);color:#fff;padding:14px 28px;border-radius:12px;
+  font-size:14px;z-index:9999;display:none;
+  -webkit-animation:fadeIn 0.3s ease;animation:fadeIn 0.3s ease;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/" class="back-btn">&#8592;</a>
+  <h1>闹钟设置</h1>
+  <div style="width:36px;"></div>
+</div>
+
+<div class="container">
+
+  <!-- 闹钟管理 -->
+  <div class="section">
+    <div class="section-title"><span class="icon">&#9201;</span> 闹钟管理</div>
+    <div class="alarm-list" id="alarmList"></div>
+    <div class="form-row">
+      <input type="text" class="form-input" id="newAlarmTime" placeholder="HHmm 如 0730" style="max-width:120px;">
+      <button class="btn btn-primary btn-sm" onclick="addAlarm()">添加</button>
+    </div>
+    <div class="checkbox-row" id="alarmTypes">
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="1">法定工作日</label>
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="2">法定休息日</label>
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="4">每天</label>
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="5">周日</label>
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="6">周一</label>
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="7">周二</label>
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="8">周三</label>
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="9">周四</label>
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="10">周五</label>
+      <label class="checkbox-item"><input type="checkbox" name="atype" value="11">周六</label>
+    </div>
+  </div>
+
+  <!-- 基础设置 -->
+  <div class="section">
+    <div class="section-title"><span class="icon">&#9881;</span> 基础设置</div>
+    <div class="form-row"><span class="form-label">默认音量</span><input type="text" class="form-input" id="volDefault" placeholder="0-100"></div>
+    <div class="form-row"><span class="form-label">闹钟音量</span><input type="text" class="form-input" id="volAlarm" placeholder="0-100"></div>
+    <div class="form-row"><span class="form-label">闹钟时长</span><input type="text" class="form-input" id="alarmTime" placeholder="分钟 如4.5"></div>
+    <div class="form-row"><span class="form-label">时区</span><input type="text" class="form-input" id="tz" placeholder="中国填8" style="max-width:100px;"><span style="font-size:12px;color:rgba(232,234,246,0.5);">UTC+</span></div>
+    <div class="form-row"><span class="form-label">天气代码</span><input type="text" class="form-input" id="weatherCityCode" placeholder="不填不播报"><button class="btn btn-ghost btn-sm" onclick="getCityCode()">查询</button></div>
+    <div class="form-row"><span class="form-label">更新时间</span><input type="text" class="form-input" id="weatherUpdate" placeholder="HHmm" style="max-width:120px;"></div>
+  </div>
+
+  <!-- 音乐设置 -->
+  <div class="section">
+    <div class="section-title"><span class="icon">&#9835;</span> 音乐设置</div>
+    <div class="form-row"><span class="form-label">闹钟歌单</span><input type="text" class="form-input" id="nePlayListId" placeholder="网易云歌单ID"></div>
+    <div class="form-row"><span class="form-label">默认歌单</span><input type="text" class="form-input" id="defPlayListId" placeholder="网易云歌单ID"></div>
+    <div class="hint">歌单ID在网易云分享链接中 id= 后面的数字</div>
+  </div>
+
+  <!-- 米家登录 -->
+  <div class="section">
+    <div class="section-title"><span class="icon">&#127968;</span> 米家登录</div>
+    <div id="miLoginStatus" style="margin-bottom:12px;"><span class="status-badge status-warn">检查中...</span></div>
+    <div class="form-row">
+      <input type="text" class="form-input" id="miUser" placeholder="手机号/邮箱">
+      <input type="password" class="form-input" id="miPass" placeholder="密码">
+    </div>
+    <div style="display:-webkit-box;display:-webkit-flex;display:flex;gap:8px;margin-bottom:12px;">
+      <button class="btn btn-primary btn-sm" onclick="miLogin()" style="-webkit-flex:1;flex:1;">密码登录</button>
+      <button class="btn btn-ghost btn-sm" onclick="qrLogin()" style="-webkit-flex:1;flex:1;">扫码登录</button>
+    </div>
+    <div class="qr-box" id="qrBox">
+      <div id="qrCodeImg"></div>
+      <div class="qr-tip" id="qrTip">请使用米家App扫码登录</div>
+    </div>
+  </div>
+
+  <!-- 设备选择 -->
+  <div class="section">
+    <div class="section-title"><span class="icon">&#128268;</span> 设备选择</div>
+    <div class="form-row">
+      <span class="form-label">家庭</span>
+      <select class="form-input" id="miHomeSelect" onchange="loadMiDevices()"><option value="">请先登录米家</option></select>
+    </div>
+    <div class="form-row">
+      <span class="form-label">设备</span>
+      <select class="form-input" id="miDeviceSelect" onchange="selectMiDevice()"><option value="">请选择家庭</option></select>
+    </div>
+    <div class="form-row">
+      <span class="form-label">开关属性</span>
+      <input type="text" class="form-input" id="miSiid" value="2" style="max-width:60px;text-align:center;">
+      <span style="font-size:12px;color:rgba(232,234,246,0.5);">siid</span>
+      <input type="text" class="form-input" id="miPiid" value="1" style="max-width:60px;text-align:center;">
+      <span style="font-size:12px;color:rgba(232,234,246,0.5);">piid</span>
+    </div>
+    <div class="hint">空调开关通常为 siid=2, piid=1</div>
+    <div id="miDeviceStatus" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- 睡过头检测 -->
+  <div class="section">
+    <div class="section-title"><span class="icon">&#9888;</span> 睡过头检测</div>
+    <div class="form-row">
+      <label class="checkbox-item" style="margin-bottom:0;"><input type="checkbox" id="oversleepEnable"> 启用睡过头检测</label>
+      <label class="checkbox-item" style="margin-bottom:0;"><input type="checkbox" id="workOnly"> 仅工作日</label>
+    </div>
+
+    <div style="margin:16px 0 8px;font-size:13px;color:rgba(232,234,246,0.7);">工作时间区间（可添加多个）</div>
+    <div class="interval-list" id="intervalList"></div>
+    <button class="btn btn-ghost btn-sm" onclick="addInterval()">+ 添加区间</button>
+
+    <div style="margin:16px 0 8px;font-size:13px;color:rgba(232,234,246,0.7);">Bark 推送</div>
+    <div class="form-row">
+      <input type="text" class="form-input" id="barkUrl" placeholder="https://api.day.app/你的key">
+      <button class="btn btn-ghost btn-sm" onclick="testBark()">测试</button>
+    </div>
+    <div class="form-row"><span class="form-label">推送间隔</span><input type="text" class="form-input" id="barkInterval" style="max-width:80px;" value="300"><span style="font-size:12px;color:rgba(232,234,246,0.5);">秒</span></div>
+    <div class="form-row"><span class="form-label">检查间隔</span><input type="text" class="form-input" id="checkInterval" style="max-width:80px;" value="30"><span style="font-size:12px;color:rgba(232,234,246,0.5);">秒</span></div>
+
+    <div style="margin:16px 0 8px;font-size:13px;color:rgba(232,234,246,0.7);">音量渐强</div>
+    <div class="form-row"><span class="form-label">起始音量</span><input type="text" class="form-input" id="volRampStart" style="max-width:60px;" value="50"></div>
+    <div class="form-row"><span class="form-label">每次增加</span><input type="text" class="form-input" id="volRampStep" style="max-width:60px;" value="10"></div>
+    <div class="form-row"><span class="form-label">增加间隔</span><input type="text" class="form-input" id="volRampInterval" style="max-width:60px;" value="60"><span style="font-size:12px;color:rgba(232,234,246,0.5);">秒</span></div>
+    <div class="form-row"><span class="form-label">最大音量</span><input type="text" class="form-input" id="volRampMax" style="max-width:60px;" value="100"></div>
+  </div>
+
+</div>
+
+<div class="save-bar">
+  <button class="btn btn-ghost" onclick="location.href='/'">取消</button>
+  <button class="btn btn-primary" onclick="saveAll()">保存设置</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var qrPollTimer=null;
+var currentHomes=[];
+
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.style.display='block';
+  setTimeout(function(){t.style.display='none';},2000);
+}
+
+function ajaxGet(url,cb){
+  var x=new XMLHttpRequest();
+  x.open('GET',url,true);
+  x.onreadystatechange=function(){if(x.readyState===4){cb(x.status,x.responseText);}};
+  x.send();
+}
+
+// 加载闹钟列表
+function loadAlarms(){
+  ajaxGet('/status',function(st,text){
+    if(st===200){
+      try{
+        var d=JSON.parse(text);
+        var list=document.getElementById('alarmList');
+        list.innerHTML='';
+        if(d.playList&&d.playList.length){
+          for(var i=0;i<d.playList.length;i++){
+            var a=d.playList[i];
+            var item=document.createElement('div');
+            item.className='alarm-item';
+            var days=a[1]?a[1].join(','):'每天';
+            item.innerHTML='<div><div class="alarm-time">'+a[0]+'</div><div class="alarm-days">'+days+'</div></div><button class="btn btn-danger btn-sm" onclick="delAlarm(\''+a[0]+'\')">删除</button>';
+            list.appendChild(item);
+          }
+        }else{
+          list.innerHTML='<div style="text-align:center;color:rgba(232,234,246,0.4);padding:20px;font-size:13px;">暂无闹钟</div>';
+        }
+      }catch(e){}
+    }
+  });
+}
+
+function addAlarm(){
+  var t=document.getElementById('newAlarmTime').value.trim();
+  if(!t){showToast('请输入闹钟时间');return;}
+  var checks=document.getElementsByName('atype');
+  var types=[];
+  for(var i=0;i<checks.length;i++){if(checks[i].checked)types.push(checks[i].value);}
+  if(types.length===0)types=['4'];
+  var url='/addAlarm?hhmm='+encodeURIComponent(t)+'&type='+types.join(',');
+  ajaxGet(url,function(){setTimeout(loadAlarms,500);showToast('已添加');});
+  document.getElementById('newAlarmTime').value='';
+}
+
+function delAlarm(t){
+  ajaxGet('/delAlarm?hhmm='+encodeURIComponent(t),function(){setTimeout(loadAlarms,500);showToast('已删除');});
+}
+
+// 米家登录
+function miLogin(){
+  var u=document.getElementById('miUser').value.trim();
+  var p=document.getElementById('miPass').value;
+  if(!u||!p){showToast('请输入账号密码');return;}
+  ajaxGet('/mi/login?user='+encodeURIComponent(u)+'&pass='+encodeURIComponent(p),function(st,text){
+    if(st===200){showToast('登录成功');checkMiStatus();loadMiHomes();}
+    else{showToast('登录失败');}
+  });
+}
+
+function qrLogin(){
+  var box=document.getElementById('qrBox');
+  box.className='qr-box show';
+  document.getElementById('qrTip').textContent='正在生成二维码...';
+  ajaxGet('/mi/qr/generate',function(st,text){
+    if(st!==200){document.getElementById('qrTip').textContent='生成失败';return;}
+    try{
+      var d=JSON.parse(text);
+      var img=document.getElementById('qrCodeImg');
+      img.innerHTML='';
+      new QRCode(img,{text:d.qrData,width:200,height:200,correctLevel:QRCode.CorrectLevel.M});
+      document.getElementById('qrTip').textContent='请使用米家App扫码，然后在手机上确认';
+      if(qrPollTimer)clearInterval(qrPollTimer);
+      qrPollTimer=setInterval(function(){
+        ajaxGet('/mi/qr/status',function(s,t2){
+          if(s===200){
+            try{
+              var r=JSON.parse(t2);
+              if(r.success){
+                clearInterval(qrPollTimer);qrPollTimer=null;
+                document.getElementById('qrTip').textContent='登录成功！';
+                showToast('扫码登录成功');
+                setTimeout(function(){box.className='qr-box';checkMiStatus();loadMiHomes();},1000);
+              }else if(r.message){
+                document.getElementById('qrTip').textContent=r.message;
+              }
+            }catch(e){}
+          }
+        });
+      },3000);
+    }catch(e){document.getElementById('qrTip').textContent='解析失败';}
+  });
+}
+
+function checkMiStatus(){
+  ajaxGet('/mi/status',function(st,text){
+    var el=document.getElementById('miLoginStatus');
+    if(st===200){
+      try{
+        var d=JSON.parse(text);
+        if(d.loggedIn){el.innerHTML='<span class="status-badge status-ok">已登录: '+(d.userId||'')+'</span>';}
+        else{el.innerHTML='<span class="status-badge status-warn">未登录</span>';}
+      }catch(e){el.innerHTML='<span class="status-badge status-err">状态异常</span>';}
+    }else{el.innerHTML='<span class="status-badge status-err">未登录</span>';}
+  });
+}
+
+function loadMiHomes(){
+  ajaxGet('/mi/homes',function(st,text){
+    var sel=document.getElementById('miHomeSelect');
+    sel.innerHTML='<option value="">选择家庭</option>';
+    if(st===200){
+      try{
+        var d=JSON.parse(text);
+        currentHomes=d.homes||d||[];
+        var homes=currentHomes.homes||currentHomes;
+        if(homes&&homes.length){
+          for(var i=0;i<homes.length;i++){
+            var h=homes[i];
+            var opt=document.createElement('option');
+            opt.value=JSON.stringify({id:h.id||h.homeid,owner:h.uid||h.owner||h.appid||''});
+            opt.textContent=h.name||h.home_name||('家庭'+(i+1));
+            sel.appendChild(opt);
+          }
+        }
+      }catch(e){}
+    }
+  });
+}
+
+function loadMiDevices(){
+  var val=document.getElementById('miHomeSelect').value;
+  if(!val)return;
+  try{
+    var h=JSON.parse(val);
+    ajaxGet('/mi/devices?homeId='+encodeURIComponent(h.id)+'&owner='+encodeURIComponent(h.owner),function(st,text){
+      var sel=document.getElementById('miDeviceSelect');
+      sel.innerHTML='<option value="">选择设备</option>';
+      if(st===200){
+        try{
+          var d=JSON.parse(text);
+          var devs=d.devices||d||[];
+          if(devs&&devs.length){
+            for(var i=0;i<devs.length;i++){
+              var dv=devs[i];
+              var opt=document.createElement('option');
+              opt.value=JSON.stringify({did:dv.did||dv.deviceId||'',name:dv.name||dv.deviceName||''});
+              opt.textContent=dv.name||dv.deviceName||('设备'+(i+1));
+              sel.appendChild(opt);
+            }
+          }
+        }catch(e){}
+      }
+    });
+  }catch(e){}
+}
+
+function selectMiDevice(){
+  var val=document.getElementById('miDeviceSelect').value;
+  if(!val)return;
+  try{
+    var d=JSON.parse(val);
+    ajaxGet('/mi/select?did='+encodeURIComponent(d.did)+'&name='+encodeURIComponent(d.name),function(){
+      showToast('设备已选择');
+      checkDeviceStatus();
+    });
+  }catch(e){}
+}
+
+function checkDeviceStatus(){
+  var val=document.getElementById('miDeviceSelect').value;
+  if(!val)return;
+  try{
+    var d=JSON.parse(val);
+    ajaxGet('/mi/devicestatus?did='+encodeURIComponent(d.did),function(st,text){
+      var el=document.getElementById('miDeviceStatus');
+      if(st===200){
+        try{
+          var r=JSON.parse(text);
+          el.innerHTML='<span class="status-badge '+(r.on?'status-ok':'status-warn')+'">设备状态: '+(r.on?'开启':'关闭')+'</span>';
+        }catch(e){el.innerHTML='';}
+      }
+    });
+  }catch(e){}
+}
+
+// 工作区间
+function addInterval(start,end){
+  var list=document.getElementById('intervalList');
+  var item=document.createElement('div');
+  item.className='interval-item';
+  item.innerHTML='<input type="text" class="form-input" placeholder="开始" value="'+(start||'0900')+'"><span class="interval-sep">至</span><input type="text" class="form-input" placeholder="结束" value="'+(end||'1800')+'"><button class="interval-del" onclick="this.parentNode.remove()">&times;</button>';
+  list.appendChild(item);
+}
+
+function getIntervals(){
+  var items=document.querySelectorAll('#intervalList .interval-item');
+  var result=[];
+  for(var i=0;i<items.length;i++){
+    var inputs=items[i].querySelectorAll('input');
+    var s=inputs[0].value.trim();
+    var e=inputs[1].value.trim();
+    if(s&&e)result.push({start:s,end:e});
+  }
+  return result;
+}
+
+// Bark测试
+function testBark(){
+  var url=document.getElementById('barkUrl').value.trim();
+  if(!url){showToast('请先填写Bark链接');return;}
+  ajaxGet('/updateCfg?barkUrl='+encodeURIComponent(url),function(){
+    ajaxGet('/oversleep/testBark',function(){showToast('已发送测试推送');});
+  });
+}
+
+function getCityCode(){
+  var city=prompt('请输入市/区名称（如：北京、朝阳）');
+  if(city){
+    ajaxGet('/getWeatherCityCode?city='+encodeURIComponent(city),function(st,text){
+      if(st===200){
+        try{
+          var d=JSON.parse(text);
+          var code=d.code||d.cityCode||d.adcode||'';
+          if(code){document.getElementById('weatherCityCode').value=code;showToast('已填入: '+code);}
+          else{showToast('未找到该城市');}
+        }catch(e){showToast('查询失败');}
+      }
+    });
+  }
+}
+
+// 加载配置
+function loadConfig(){
+  ajaxGet('/oversleep/status',function(st,text){
+    if(st===200){
+      try{
+        var d=JSON.parse(text);
+        document.getElementById('oversleepEnable').checked=d.enabled===true;
+        document.getElementById('workOnly').checked=d.workOnly===true;
+        document.getElementById('barkUrl').value=d.barkUrl||'';
+        document.getElementById('barkInterval').value=d.barkInterval||300;
+        document.getElementById('checkInterval').value=d.checkInterval||30;
+        document.getElementById('volRampStart').value=d.volRampStart||50;
+        document.getElementById('volRampStep').value=d.volRampStep||10;
+        document.getElementById('volRampInterval').value=d.volRampInterval||60;
+        document.getElementById('volRampMax').value=d.volRampMax||100;
+        document.getElementById('miSiid').value=d.miSiid||2;
+        document.getElementById('miPiid').value=d.miPiid||1;
+        // 加载工作区间
+        var list=document.getElementById('intervalList');
+        list.innerHTML='';
+        var ivs=d.workIntervals||[];
+        if(ivs.length===0)ivs=[{start:'0900',end:'1800'}];
+        for(var i=0;i<ivs.length;i++){addInterval(ivs[i].start,ivs[i].end);}
+      }catch(e){}
+    }
+  });
+}
+
+// 保存所有设置
+function saveAll(){
+  var params=[];
+  function add(k,v){if(v!==''&&v!==null&&v!==undefined)params.push(k+'='+encodeURIComponent(v));}
+  add('volDefault',document.getElementById('volDefault').value);
+  add('volAlarm',document.getElementById('volAlarm').value);
+  add('alarmTime',document.getElementById('alarmTime').value);
+  add('tz',document.getElementById('tz').value);
+  add('weatherCityCode',document.getElementById('weatherCityCode').value);
+  add('weatherUpdate',document.getElementById('weatherUpdate').value);
+  add('nePlayListId',document.getElementById('nePlayListId').value);
+  add('defPlayListId',document.getElementById('defPlayListId').value);
+  add('oversleepEnable',document.getElementById('oversleepEnable').checked?'1':'0');
+  add('workOnly',document.getElementById('workOnly').checked?'1':'0');
+  add('workIntervals',JSON.stringify(getIntervals()));
+  add('barkUrl',document.getElementById('barkUrl').value);
+  add('barkInterval',document.getElementById('barkInterval').value);
+  add('oversleepCheckInterval',document.getElementById('checkInterval').value);
+  add('volRampStart',document.getElementById('volRampStart').value);
+  add('volRampStep',document.getElementById('volRampStep').value);
+  add('volRampInterval',document.getElementById('volRampInterval').value);
+  add('volRampMax',document.getElementById('volRampMax').value);
+  add('miSiid',document.getElementById('miSiid').value);
+  add('miPiid',document.getElementById('miPiid').value);
+  var url='/updateCfg?'+params.join('&');
+  ajaxGet(url,function(st){
+    if(st===200){showToast('保存成功');setTimeout(function(){location.href='/';},800);}
+    else{showToast('保存失败');}
+  });
+}
+
+// 初始化
+loadAlarms();
+checkMiStatus();
+loadConfig();
+</script>
+</body>
+</html>

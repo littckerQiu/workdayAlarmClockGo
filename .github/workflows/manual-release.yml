@@ -1,0 +1,185 @@
+name: Manual release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v20.0
+        required: true
+        type: string
+      release_name:
+        description: Release name (defaults to the tag)
+        required: false
+        type: string
+      prerelease:
+        description: Mark the release as a prerelease
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download Go dependencies
+        run: go mod download
+
+      - name: Install cross compilers and ALSA headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            curl \
+            gcc-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi \
+            gcc-i686-linux-gnu \
+            gcc-mipsel-linux-gnu \
+            libc6-dev-arm64-cross \
+            libc6-dev-armel-cross \
+            libc6-dev-i386-cross \
+            libasound2-dev \
+            linux-libc-dev-arm64-cross \
+            linux-libc-dev-armel-cross \
+            make \
+            xz-utils
+
+      - name: Build release files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf build
+          mkdir -p build
+
+          ALSA_VERSION=1.2.11
+          ALSA_ARCHIVE="$RUNNER_TEMP/alsa-lib.tar.bz2"
+          ALSA_SOURCE="$RUNNER_TEMP/alsa-lib-$ALSA_VERSION"
+
+          MIPSEL_SYSROOT="$RUNNER_TEMP/mipsel-sysroot"
+          MIPSEL_BASE_URL="https://archive.ubuntu.com/ubuntu/pool/universe/c/cross-toolchain-base-ports"
+          mkdir -p "$MIPSEL_SYSROOT"
+          for package in \
+            libc6-mipsel-cross_2.23-0ubuntu3cross1_all.deb \
+            libc6-dev-mipsel-cross_2.23-0ubuntu3cross1_all.deb \
+            linux-libc-dev-mipsel-cross_4.4.0-18.34cross1_all.deb; do
+            curl --fail --location --retry 3 \
+              "$MIPSEL_BASE_URL/$package" \
+              --output "$RUNNER_TEMP/$package"
+            dpkg-deb -x "$RUNNER_TEMP/$package" "$MIPSEL_SYSROOT"
+          done
+          test -r "$MIPSEL_SYSROOT/usr/mipsel-linux-gnu/include/gnu/stubs-o32_hard.h"
+          test -r "$MIPSEL_SYSROOT/usr/mipsel-linux-gnu/lib/crt1.o"
+          if [[ ! -e "$MIPSEL_SYSROOT/usr/include" ]]; then
+            ln -s mipsel-linux-gnu/include "$MIPSEL_SYSROOT/usr/include"
+          fi
+          if [[ ! -e "$MIPSEL_SYSROOT/lib" ]]; then
+            ln -s usr/mipsel-linux-gnu/lib "$MIPSEL_SYSROOT/lib"
+          fi
+          MIPSEL_LIB="$MIPSEL_SYSROOT/usr/mipsel-linux-gnu/lib"
+          MIPSEL_INCLUDE="$MIPSEL_SYSROOT/usr/mipsel-linux-gnu/include"
+          MIPSEL_CC="mipsel-linux-gnu-gcc --sysroot=$MIPSEL_SYSROOT -B$MIPSEL_LIB/ -isystem $MIPSEL_INCLUDE -L$MIPSEL_LIB"
+
+          curl --fail --location --retry 3 \
+            "https://www.alsa-project.org/files/pub/lib/alsa-lib-$ALSA_VERSION.tar.bz2" \
+            --output "$ALSA_ARCHIVE"
+          tar -xjf "$ALSA_ARCHIVE" -C "$RUNNER_TEMP"
+
+          build_alsa() {
+            local name="$1"
+            local host="$2"
+            local compiler="$3"
+            local extra_flags="${4:-}"
+            local build_dir="$RUNNER_TEMP/alsa-build-$name"
+            local prefix="$RUNNER_TEMP/alsa-$name"
+            local library_flags=(--enable-shared --disable-static)
+
+            mkdir -p "$build_dir"
+            (
+              cd "$build_dir"
+              # Avoid a relative version-script path in ALSA's out-of-tree build.
+              if ! CC="$compiler" \
+                CFLAGS="-O2 $extra_flags" \
+                PKG_CONFIG=false \
+                "$ALSA_SOURCE/configure" \
+                  --host="$host" \
+                  --prefix="$prefix" \
+                  "${library_flags[@]}" \
+                  --disable-python \
+                  --without-versioned; then
+                cat config.log
+                exit 1
+              fi
+              make -j"$(nproc)"
+              make install
+            )
+          }
+
+          build_linux() {
+            local goarch="$1"
+            local output="$2"
+            local compiler="$3"
+            local alsa_prefix="$4"
+            local goarm="${5:-}"
+            local gomips="${6:-}"
+            local c_flags="${7:-}"
+
+            env \
+              GOOS=linux \
+              GOARCH="$goarch" \
+              GOARM="$goarm" \
+              GOMIPS="$gomips" \
+              CGO_ENABLED=1 \
+              CC="$compiler" \
+              CGO_CFLAGS="-I$alsa_prefix/include $c_flags" \
+              CGO_LDFLAGS="-L$alsa_prefix/lib $c_flags" \
+              go build -trimpath -ldflags="-w -s" -o "build/$output" .
+          }
+
+          build_alsa i386 i686-linux-gnu i686-linux-gnu-gcc
+          build_alsa arm arm-linux-gnueabi arm-linux-gnueabi-gcc
+          build_alsa arm64 aarch64-linux-gnu aarch64-linux-gnu-gcc
+          build_alsa mipsle mipsel-linux-gnu "$MIPSEL_CC"
+
+          env GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
+            go build -trimpath -ldflags="-w -s" -o build/workdayAlarmClock.exe .
+          env GOOS=windows GOARCH=386 CGO_ENABLED=0 \
+            go build -trimpath -ldflags="-w -s" -o build/workdayAlarmClock-i386.exe .
+
+          env GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC=gcc \
+            go build -trimpath -ldflags="-w -s" -o build/workdayAlarmClock-linux .
+          build_linux 386 workdayAlarmClock-linux-i386 i686-linux-gnu-gcc "$RUNNER_TEMP/alsa-i386"
+          build_linux arm workdayAlarmClock-linux-arm arm-linux-gnueabi-gcc "$RUNNER_TEMP/alsa-arm" 5
+          build_linux arm64 workdayAlarmClock-linux-arm64 aarch64-linux-gnu-gcc "$RUNNER_TEMP/alsa-arm64"
+          build_linux mipsle workdayAlarmClock-linux-mipsle "$MIPSEL_CC" "$RUNNER_TEMP/alsa-mipsle" "" hardfloat
+          if mipsel-linux-gnu-readelf --version-info build/workdayAlarmClock-linux-mipsle | grep -Eq 'GLIBC_2\.(2[4-9]|[3-9][0-9])'; then
+            echo "MIPS binary requires glibc newer than the target-compatible 2.23 sysroot" >&2
+            exit 1
+          fi
+
+          env GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 \
+            go build -trimpath -ldflags="-w -s" -o build/workdayAlarmClock-darwin .
+          env GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 \
+            go build -trimpath -ldflags="-w -s" -o build/workdayAlarmClock-darwin-arm64 .
+
+          ls -lh build
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: ${{ inputs.release_name || inputs.tag }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          files: build/*

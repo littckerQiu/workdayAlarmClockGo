@@ -1,0 +1,745 @@
+/*
+ * 播放器
+ * zyyme 20230630
+ * v1.0
+ */
+
+package player
+
+import (
+	"fmt"
+	"io"
+	"log"
+	"math/rand"
+	"net/url"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+	"workdayAlarmClock/app"
+	"workdayAlarmClock/conf"
+	"workdayAlarmClock/nemusic"
+	"workdayAlarmClock/weather"
+
+	"github.com/zanjie1999/httpme"
+)
+
+var (
+	// 是否停止播放
+	IsStop = true
+	// 是否暂停播放
+	IsPaused = false
+	// 当前的播放列表
+	PlayList      = []string{}
+	IsAlarm       = false
+	IsPlayWeather = false
+	UnixCmd       *exec.Cmd
+	unixCmdMu     sync.Mutex
+	NowUrl        = ""
+	PrevUrl       = ""
+	NowId         = ""
+	PrevId        = ""
+	LoopMode      = false
+	IsOversleep   = false // 睡过头持续响铃模式
+	oversleepTracks = []string{} // 睡过头模式的曲目缓存（用于循环）
+	// 开始播放和定时结束时间
+	StartUnix int64 = 0
+	StopUnix  int64 = 0
+	// Resolve the local player only for standalone Linux builds. Android app
+	// mode delegates playback to the host app and must not probe executables
+	// during package initialization (Android blocks faccessat2).
+	ShellPlayer = ""
+	PrevRdmFlag = false
+	SkipAlarm   = 0
+)
+
+// InitDefaultShellPlayer resolves the local command-line player. It is kept
+// out of package initialization so Android app mode never calls exec.LookPath.
+func InitDefaultShellPlayer() {
+	if ShellPlayer == "" {
+		ShellPlayer = defaultShellPlayer()
+	}
+}
+
+// 上一首 或一键者播放指定歌单
+// 第一次按上一首键会放上一曲（如果有)，第二次会顺序播放歌单，第三次会随机播放歌单（如果没有放完一首）
+func Prev() string {
+	if PrevUrl != "" {
+		PrevRdmFlag = false
+	}
+	if PrevRdmFlag {
+		app.Send("ECHO 随机播放列表")
+		PrevRdmFlag = false
+		NowUrl = ""
+		PrevUrl = ""
+		NowId = ""
+		// PlayPlaylist(conf.Cfg.DefPlayListId, true)
+		// return "随机播放歌单" + conf.Cfg.DefPlayListId
+		// 不重新获取 直接随机当前播放列表
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(PlayList), func(i, j int) {
+			PlayList[i], PlayList[j] = PlayList[j], PlayList[i]
+		})
+		Next()
+		return "随机播放列表"
+	} else if PrevUrl != "" {
+		app.Send("ECHO 上一首")
+		if len(PlayList) == 0 {
+			PlayList = []string{NowUrl}
+		} else if NowId != "" {
+			PlayList = append([]string{NowId}, PlayList...)
+		} else {
+			PlayList = append([]string{NowUrl}, PlayList...)
+		}
+		// 不清空的话会永远在这一首和上一首循环 变相清空PrevUrl
+		NowUrl = ""
+		NowId = ""
+		if PrevId != "" && conf.IsApp {
+			app.Send("SONGID " + PrevId)
+		}
+		PlayUrl(PrevUrl)
+		return "上一首"
+	} else {
+		app.Send("ECHO 播放歌单" + conf.Cfg.DefPlayListId)
+		// 不清空就会在播放歌单和上一首之间循环
+		NowUrl = ""
+		PrevUrl = ""
+		NowId = ""
+		if strings.HasPrefix(conf.Cfg.DefPlayListId, "http") {
+			PlayUrl(conf.Cfg.DefPlayListId)
+			return "播放默认URL" + conf.Cfg.DefPlayListId
+		} else {
+			PlayPlaylist(conf.Cfg.DefPlayListId, false)
+			return "播放默认歌单" + conf.Cfg.DefPlayListId
+		}
+	}
+}
+
+// 下一首
+func Next() string {
+	for {
+		if LoopMode && NowUrl != "" {
+			PlayUrl(NowUrl)
+			return NowUrl
+		}
+		if IsAlarm && NowId != "" {
+			// 保存闹钟放过的记录
+			log.Println("闹钟记录", NowId)
+			conf.Cfg.NePlayed = append(conf.Cfg.NePlayed, NowId)
+		}
+		if StopUnix != 0 && StopUnix < time.Now().Unix() {
+			StopUnix = 0
+			log.Println("定时停止")
+			Stop()
+			return "定时停止"
+		}
+		if len(PlayList) > 0 {
+			now := PlayList[0]
+			PlayList = append([]string(nil), PlayList[1:]...)
+			if now == "" {
+				log.Println("不是播放列表怎么有空的播放项目？")
+				continue
+			}
+			if len(PlayList) > 0 {
+				app.Send("ECHO 待播放 " + strconv.Itoa(len(PlayList)))
+			} else {
+				app.Send("ECHO 正在播放")
+			}
+			if len(now) > 3 && (now[:4] == "http" || now[0] == '.' || now[0] == '/' || now[1] == ':') {
+				PlayUrl(now)
+				return now
+			} else {
+				NowId = now
+				if conf.IsApp {
+					app.Send("SONGID " + now)
+				}
+				u := nemusic.MusicUrl(now)
+				if u != "" {
+					PlayUrl(u)
+					return u
+				}
+			}
+		} else {
+			// 睡过头模式：歌单放完后重新填充，持续响铃直到设备关闭
+			if IsOversleep && len(oversleepTracks) > 0 {
+				log.Println("睡过头闹钟歌单放完，重新循环")
+				rand.Seed(time.Now().UnixNano())
+				ids := make([]string, len(oversleepTracks))
+				copy(ids, oversleepTracks)
+				rand.Shuffle(len(ids), func(i, j int) {
+					ids[i], ids[j] = ids[j], ids[i]
+				})
+				PlayList = ids
+				continue
+			}
+			Stop()
+			log.Println("停止播放")
+			return "停止播放"
+		}
+	}
+}
+
+// 一键急停按钮 自动控制播放停止
+func Me1Key() string {
+	if IsStop {
+		return PlayPlaylist(conf.Cfg.DefPlayListId, false)
+	} else {
+		Stop()
+		return "stop"
+	}
+}
+
+// 播放歌单
+func PlayPlaylist(id string, random bool) string {
+	// 在播放任意歌单后，按上一首来随机
+	PrevRdmFlag = true
+	LoopMode = false
+	ids, name, _ := nemusic.PlayList(id)
+	if random {
+		// 打乱歌单
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(ids), func(i, j int) {
+			ids[i], ids[j] = ids[j], ids[i]
+		})
+	}
+	PlayList = ids
+	Next()
+	return name
+}
+
+// 播放歌曲
+func PlayPlaymusic(id string, loopMode bool) {
+	// 在播放任意歌单后，按上一首来随机
+	PrevRdmFlag = true
+	LoopMode = loopMode
+	if conf.IsApp {
+		app.Send("SONGID " + id)
+	}
+	url := nemusic.MusicUrl(id)
+	if url != "" {
+		PlayUrl(url)
+	}
+}
+
+// 预下载播报的天气
+func DownWeather() {
+	os.Remove("weather.mp3")
+	os.Remove("weather2.mp3")
+	msg := weather.GetWeather("")
+	if msg != "" {
+		downloadFile("https://dds.dui.ai/runtime/v1/synthesize?voiceId=cyangfp&speed=1&volume=100&audioType=mp3&text="+url.QueryEscape(msg), "weather2.mp3")
+		os.Rename("weather2.mp3", "weather.mp3")
+	}
+
+}
+
+// 播放url音乐
+func PlayUrl(url string) {
+	if StartUnix == 0 {
+		StartUnix = time.Now().Unix()
+		if conf.Cfg.MuteWhenStop && !IsPlayWeather && !IsAlarm {
+			SetVol(conf.Cfg.VolDefault)
+		}
+	}
+	IsStop = false
+	IsPaused = false
+	PrevId = NowId
+	PrevUrl = NowUrl
+	NowUrl = url
+	if conf.IsApp {
+		app.PlayUrl(url)
+	} else {
+		go UnixPlayUrl(url)
+	}
+}
+
+func Stop() {
+	app.Send("ECHO 工作咩闹钟")
+	LoopMode = false
+	PrevRdmFlag = false
+	IsOversleep = false
+	oversleepTracks = []string{}
+	PrevId = NowId
+	PrevUrl = NowUrl
+	NowUrl = ""
+	StartUnix = 0
+	StopUnix = 0
+	// 保存闹钟播放记录
+	if IsAlarm && NowId != "" {
+		if len(conf.Cfg.NePlayed) < 1 || conf.Cfg.NePlayed[len(conf.Cfg.NePlayed)-1] != NowId {
+			conf.Cfg.NePlayed = append(conf.Cfg.NePlayed, NowId)
+		}
+		log.Println("闹钟保存，已播放", len(conf.Cfg.NePlayed))
+		conf.Save()
+		NowId = ""
+	}
+	NowId = ""
+	PlayList = []string{}
+	IsPaused = false
+	if conf.IsApp {
+		app.Send("STOP")
+	} else {
+		cancelPlatformPlayback()
+		killUnixCmd()
+	}
+	if IsAlarm {
+		IsAlarm = false
+		IsPlayWeather = true
+		// 结束闹钟时播放天气
+		if stat, err := os.Stat("weather.mp3"); err == nil && stat.Size() > 0 {
+			if conf.IsApp {
+				PlayUrl("./weather.mp3")
+			} else {
+				PlayUrl("http://127.0.0.1" + conf.Port + "/weather.mp3")
+			}
+			// 万一放不了,需要保证会真正停止
+			time.AfterFunc(time.Second*120, func() {
+				if IsPlayWeather {
+					Stop()
+				}
+			})
+		}
+	} else if IsPlayWeather {
+		IsPlayWeather = false
+		if conf.Cfg.MuteWhenStop {
+			SetVol("0")
+		} else {
+			SetVol(conf.Cfg.VolDefault)
+		}
+		PrevUrl = ""
+		if conf.IsApp {
+			app.Send("SCREENOFF")
+		}
+	} else if conf.Cfg.MuteWhenStop {
+		SetVol("0")
+	}
+	IsStop = true
+}
+
+// 设置音量
+func SetVol(per string) {
+	log.Println("设置音量", per, "%")
+	if conf.IsApp {
+		app.SendLocal("VOL " + per)
+	} else if err := setPlatformVolume(per); err != nil {
+		log.Println("设置音量失败", err)
+	}
+}
+
+// 暂停 闹钟时重定向到停止
+func Pause() {
+	if IsStop || IsPaused {
+		return
+	}
+	if IsAlarm || IsPlayWeather {
+		Stop()
+		return
+	}
+	IsPaused = true
+	if conf.IsApp {
+		app.Send("PAUSE")
+	} else if err := pausePlatformPlayback(); err != nil {
+		log.Println("暂停播放失败", err)
+	}
+}
+
+// 恢复 未播放时重定向到1key
+func Resume() {
+	if IsStop {
+		Me1Key()
+		return
+	}
+	if !IsPaused {
+		return
+	}
+	IsPaused = false
+	if conf.IsApp {
+		app.Send("RESUME")
+	} else if err := resumePlatformPlayback(); err != nil {
+		log.Println("恢复播放失败", err)
+	}
+}
+
+func VolUp() {
+	if conf.IsApp {
+		app.Send("VOLP")
+	} else if err := changePlatformVolume("5%+"); err != nil {
+		log.Println("增加音量失败", err)
+	}
+}
+
+func VolDown() {
+	if conf.IsApp {
+		app.Send("VOLM")
+	} else if err := changePlatformVolume("5%-"); err != nil {
+		log.Println("降低音量失败", err)
+	}
+}
+
+// 去重
+func filterList(in, filter []string) []string {
+	filterMap := make(map[string]struct{})
+	for _, id := range filter {
+		filterMap[id] = struct{}{}
+	}
+	var out []string
+	for _, id := range in {
+		if _, exists := filterMap[id]; !exists {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+func filterListHasCache(in []string) []string {
+	filterMap := make(map[string]struct{})
+	files, err := os.ReadDir(conf.Cfg.SavePath)
+	if err != nil {
+		fmt.Println("读取缓存目录出错:", err)
+		return []string{}
+	}
+	for _, file := range files {
+		// 文件名是id
+		filterMap[strings.SplitN(file.Name(), ".", 2)[0]] = struct{}{}
+	}
+	var out []string
+	for _, id := range in {
+		if _, exists := filterMap[id]; exists {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// 播放闹钟音乐 时间到时调用
+func PlayAlarm() {
+	app.Send("ECHO 闹钟")
+	if SkipAlarm > 0 {
+		SkipAlarm--
+		log.Println("跳过闹钟")
+		return
+	}
+	IsAlarm = true
+	if conf.IsApp {
+		app.Send("ALARM")
+	}
+	SetVol(conf.Cfg.VolAlarm)
+	// 预下载天气信息
+	go DownWeather()
+	PlayList = []string{}
+	if strings.HasPrefix(conf.Cfg.NePlayListId, "http") {
+		log.Println("闹钟歌单配置的是URL，播放", conf.Cfg.NePlayListId)
+		PlayUrl(conf.Cfg.NePlayListId)
+		return
+	}
+	ids, _, isCache := nemusic.PlayList(conf.Cfg.NePlayListId)
+	// 定时停止闹钟
+	StopUnix = time.Now().Unix() + int64(conf.Cfg.AlarmTime*60)
+	if len(ids) == 0 {
+		// 兜底
+		log.Println("获取不到歌单，播放默认歌曲")
+		PlayUrl("http://127.0.0.1" + conf.Port + "/music.mp3")
+		return
+	} else {
+		if isCache {
+			// 放的是缓存，那要筛选出缓存有的
+			ids = filterListHasCache(ids)
+			log.Println("使用缓存，可播放", len(ids))
+			if len(ids) == 0 {
+				log.Println("没有可用缓存，播放默认歌曲")
+				PlayUrl("http://127.0.0.1" + conf.Port + "/music.mp3")
+				return
+			}
+		}
+		// 放完一次了 重置
+		if len(conf.Cfg.NePlayed)+1 >= len(ids) {
+			log.Println("闹钟歌单，共", len(ids), "，重置已播放")
+			conf.Cfg.NePlayed = []string{}
+		} else {
+			log.Println("闹钟歌单，共", len(ids), "，已播放", len(conf.Cfg.NePlayed))
+			ids = filterList(ids, conf.Cfg.NePlayed)
+			if len(ids) == 0 {
+				log.Println("虽然不知道为什么但是为空了，播放默认歌曲")
+				conf.Cfg.NePlayed = []string{}
+				PlayUrl("http://127.0.0.1" + conf.Port + "/music.mp3")
+				return
+			}
+		}
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(ids), func(i, j int) {
+			ids[i], ids[j] = ids[j], ids[i]
+		})
+		PlayList = ids
+		if len(PlayList) == 0 {
+			// 你该不是在拿咩咩寻开心吧
+			log.Println("这歌单没一首能放的！你该不是在拿咩咩寻开心吧！")
+			PlayList = append(PlayList, "http://127.0.0.1"+conf.Port+"/music.mp3")
+		}
+		conf.Save()
+		Next()
+	}
+}
+
+// PlayOversleepAlarm 睡过头持续响铃
+// 与普通闹钟不同：不会定时停止，歌单循环播放，直到设备关闭或手动停止
+func PlayOversleepAlarm() {
+	app.Send("ECHO 睡过头闹钟！设备未关闭")
+	// 如果已经在响睡过头闹钟，不重复启动
+	if IsOversleep {
+		return
+	}
+	IsOversleep = true
+	IsAlarm = true
+	if conf.IsApp {
+		app.Send("ALARM")
+	}
+	// 起始音量
+	startVol := conf.Cfg.VolRampStart
+	if startVol <= 0 {
+		startVol, _ = strconv.Atoi(conf.Cfg.VolAlarm)
+	}
+	if startVol <= 0 {
+		startVol = 50
+	}
+	SetVol(strconv.Itoa(startVol))
+	// 不预下载天气，不定时停止
+	StopUnix = 0
+	PlayList = []string{}
+	oversleepTracks = []string{}
+
+	var ids []string
+	if strings.HasPrefix(conf.Cfg.NePlayListId, "http") {
+		log.Println("睡过头闹钟歌单配置的是URL，循环播放", conf.Cfg.NePlayListId)
+		LoopMode = true
+		PlayUrl(conf.Cfg.NePlayListId)
+		return
+	}
+	ids, _, isCache := nemusic.PlayList(conf.Cfg.NePlayListId)
+	if len(ids) == 0 {
+		log.Println("获取不到歌单，播放默认歌曲")
+		LoopMode = true
+		PlayUrl("http://127.0.0.1" + conf.Port + "/music.mp3")
+		return
+	}
+	if isCache {
+		ids = filterListHasCache(ids)
+		if len(ids) == 0 {
+			log.Println("没有可用缓存，播放默认歌曲")
+			LoopMode = true
+			PlayUrl("http://127.0.0.1" + conf.Port + "/music.mp3")
+			return
+		}
+	}
+	// 保存曲目用于循环
+	oversleepTracks = make([]string, len(ids))
+	copy(oversleepTracks, ids)
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(ids), func(i, j int) {
+		ids[i], ids[j] = ids[j], ids[i]
+	})
+	PlayList = ids
+	log.Println("睡过头闹钟开始持续响铃，共", len(ids), "首")
+	Next()
+}
+
+// SetOversleepVol 睡过头闹钟音量渐强（由 oversleep 监视器调用）
+func SetOversleepVol(vol int) {
+	if vol > 100 {
+		vol = 100
+	}
+	if vol < 0 {
+		vol = 0
+	}
+	SetVol(strconv.Itoa(vol))
+}
+
+// 下载文件 细想一下之前为什么之前要写个curl，直接用http咩不更好
+func downloadFile(url string, filename string) error {
+	var err error
+	for i := 0; i < 3; i++ {
+		resp, e := httpme.GetStream(url)
+		if e != nil {
+			err = e
+		} else if resp.R.StatusCode != 200 {
+			err = fmt.Errorf("HTTP %s", resp.R.Status)
+			resp.R.Body.Close()
+		} else {
+			file, e := os.Create(filename)
+			if e != nil {
+				resp.R.Body.Close()
+				return e
+			}
+			_, err = io.Copy(file, resp.R.Body)
+			resp.R.Body.Close()
+			if closeErr := file.Close(); err == nil {
+				err = closeErr
+			}
+			if err == nil {
+				return nil
+			}
+			os.Remove(filename)
+		}
+		log.Println("下载文件失败，重试中", err)
+		if i < 2 {
+			time.Sleep(time.Second * 10)
+		}
+	}
+	return err
+}
+
+// beep库 win 和linux alsa可以用 android不行
+// func BeepPlayUrl(url string) {
+// 	request, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		log.Println(err)
+// 	}
+// 	client := &http.Client{}
+// 	response, err := client.Do(request)
+// 	if err != nil {
+// 		log.Println(err)
+// 	}
+// 	defer response.Body.Close()
+// 	// 读取文件流播放
+// 	streamer, format, err := mp3.Decode(response.Body)
+// 	if err != nil {
+// 		log.Println(err)
+// 	}
+// 	defer streamer.Close()
+// 	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
+// 	app.Send("music length :", streamer.Len())
+// 	speaker.Play(streamer)
+// 	select {}
+// }
+
+// Linux 优先使用直接 ALSA，没有时回退到 aplay/tinyplay；命令行指定播放器时沿用指定值。
+func UnixPlayUrl(url string) {
+	log.Println("start play:" + url)
+	if NowUrl != url {
+		return
+	}
+	cancelPlatformPlayback()
+	killUnixCmd()
+	if usePCMPlayer() {
+		if err := pcmURL(url); err != nil {
+			if !IsStop && NowUrl == url {
+				log.Println(ShellPlayer+" error:", err)
+			}
+			return
+		}
+		if !IsStop && NowUrl == url || IsPlayWeather {
+			log.Println("end play:" + url)
+			Next()
+		}
+		return
+	}
+	pwd, _ := os.Getwd()
+	var err error
+	var cmd *exec.Cmd
+	if strings.Contains(ShellPlayer, "meMp3Player") {
+		// 使用 咩MP3播放器 的时候，无需下载，直接播放音频流
+		log.Println("shell: ", ShellPlayer, url)
+		cmd = exec.Command(ShellPlayer, url)
+	} else {
+		err = downloadFile(url, pwd+"/play.mp3")
+		if err != nil {
+			log.Println("download error:" + err.Error())
+			return
+		}
+
+		log.Println("shell: ", ShellPlayer, pwd+"/play.mp3")
+		cmd = exec.Command(ShellPlayer, pwd+"/play.mp3")
+	}
+	err = startUnixCmd(cmd)
+	if err != nil {
+		log.Println("run " + ShellPlayer + " error:" + err.Error())
+		return
+	}
+	err = cmd.Wait()
+	clearUnixCmd(cmd)
+	if err != nil {
+		log.Println("wait", ShellPlayer, " error:"+err.Error())
+		return
+	}
+	if !IsStop && NowUrl == url || IsPlayWeather {
+		// 相等说明不是被外部中断是放完了或者类似mac的open那样不阻塞的
+		// time.Sleep(time.Second)
+		// os.Remove("play.mp3")
+		// // err = os.Remove("play.mp3")
+		// // for err != nil {
+		// // 	// 文件被占用即为正在播放
+		// // 	time.Sleep(time.Second)
+		// // 	err = os.Remove("play.mp3")
+		// // }
+		// 不删吧留着吧不差这点存储空间
+		log.Println("end play:" + url)
+		Next()
+	}
+}
+
+func startUnixCmd(cmd *exec.Cmd) error {
+	unixCmdMu.Lock()
+	defer unixCmdMu.Unlock()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	UnixCmd = cmd
+	return nil
+}
+
+func signalUnixCmd(sig os.Signal) error {
+	unixCmdMu.Lock()
+	defer unixCmdMu.Unlock()
+	if UnixCmd == nil || UnixCmd.Process == nil {
+		return nil
+	}
+	return UnixCmd.Process.Signal(sig)
+}
+
+func killUnixCmd() {
+	unixCmdMu.Lock()
+	cmd := UnixCmd
+	UnixCmd = nil
+	unixCmdMu.Unlock()
+	if cmd == nil || cmd.Process == nil {
+		return
+	}
+	_ = cmd.Process.Signal(syscall.SIGINT)
+	_ = cmd.Process.Kill()
+}
+
+func clearUnixCmd(cmd *exec.Cmd) {
+	unixCmdMu.Lock()
+	defer unixCmdMu.Unlock()
+	if UnixCmd == cmd {
+		UnixCmd = nil
+	}
+}
+
+// 不太行 于是写了个app
+// func AndroidPlayUrl(url string) {
+// 	cmd := exec.Command("curl -L -k " + url + " > /sdcard/1.mp3")
+// 	err := cmd.Start()
+// 	if err != nil {
+// 		log.Println("run curl error:" + err.Error())
+// 		// return
+// 	}
+// 	err = cmd.Wait()
+// 	if err != nil {
+// 		log.Println("wait curl error:" + err.Error())
+// 		// return
+// 	}
+// 	cmd = exec.Command("am start -a android.intent.action.VIEW -t audio/mp3 -d \"file:///sdcard/1.mp3\"")
+// 	err = cmd.Start()
+// 	if err != nil {
+// 		log.Println("run am error:" + err.Error())
+// 		return
+// 	}
+// 	err = cmd.Wait()
+// 	if err != nil {
+// 		log.Println("wait am error:" + err.Error())
+// 		return
+// 	}
+// }

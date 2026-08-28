@@ -1,0 +1,335 @@
+/*
+ * 工作咩闹钟 Go
+ * zyyme 20230630
+ */
+
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+	"workdayAlarmClock/app"
+	"workdayAlarmClock/conf"
+	"workdayAlarmClock/mihome"
+	"workdayAlarmClock/nemusic"
+	"workdayAlarmClock/oversleep"
+	"workdayAlarmClock/player"
+	"workdayAlarmClock/router"
+	"workdayAlarmClock/weather"
+
+	"github.com/zanjie1999/httpme"
+)
+
+var (
+	VERSION  = "29.3"
+	lasthhmm = ""
+)
+
+// 定时器 go timer()
+func timer() {
+	for {
+		timeJob()
+		// 秒对齐
+		time.Sleep(time.Second)
+		time.Sleep(time.Duration(60-time.Now().Unix()%60) * time.Second)
+	}
+}
+
+func timeJob() {
+	now := time.Now()
+	// 避免系统时间未同步时运行8点的闹钟
+	if now.Year() < 2025 {
+		return
+	}
+	mmdd := now.Format("0102")
+	hhmm := now.Format("1504")
+	if lasthhmm == hhmm {
+		// log.Print("定时器重复执行", hhmm)
+		return
+	}
+	lasthhmm = hhmm
+
+	// 如出错则每分钟重试 比如刚开机时间是1970-01-01或是压根没网
+	if conf.WorkDayApiErr || hhmm == "0000" {
+		conf.WorkDayApi()
+	}
+	if hhmm == conf.Cfg.WeatherUpdate {
+		weather.GetWeather("")
+	}
+	if dayTypeList, ok := conf.Cfg.Alarm[hhmm]; ok {
+		// 增加 同时间 多类型 的闹钟支持
+		for _, dayType := range dayTypeList {
+			//  法定工作日                           法定休息日                           每天            周 日一二三四五六
+			if (dayType == "1" && conf.IsWorkDay) || (dayType == "2" && !conf.IsWorkDay) || dayType == "4" || dayType == strconv.Itoa(int(now.Weekday())+5) {
+				log.Println("闹钟时间到", hhmm)
+				player.PlayAlarm()
+				break
+			} else if dayType == "3" {
+				// 一次性闹钟
+				log.Println("一次性闹钟时间到", hhmm)
+				player.PlayAlarm()
+				if len(dayTypeList) == 1 {
+					delete(conf.Cfg.Alarm, hhmm)
+				} else {
+					// 只删掉这条3的
+					for i, v := range dayTypeList {
+						if v == "3" {
+							conf.Cfg.Alarm[hhmm] = append(dayTypeList[:i], dayTypeList[i+1:]...)
+						}
+					}
+				}
+				conf.Save()
+				if conf.IsApp {
+					if len(conf.Cfg.Alarm) > 0 {
+						app.Send("ALARMON")
+					} else {
+						app.Send("ALARMOFF")
+					}
+				}
+				break
+			} else if dayType == mmdd {
+				// 月日
+				log.Println("闹钟时间到", mmdd, "的", hhmm)
+				player.PlayAlarm()
+				break
+			}
+		}
+	}
+}
+
+// 处理shell输入 go shellInput()
+func shellInput() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		cmd, err := reader.ReadString('\n')
+		cmd = strings.TrimSpace(cmd)
+		if err != nil {
+			fmt.Println("输入错误", err)
+			break
+		} else {
+			switch cmd {
+			case "pause0":
+				player.IsPaused = false
+			case "pause1":
+				player.IsPaused = true
+			case "stop":
+				player.Stop()
+			case "pause":
+				player.Pause()
+			case "resume":
+				player.Resume()
+			case "volp":
+				player.VolUp()
+			case "volm":
+				player.VolDown()
+			case "next":
+				app.Send(player.Next())
+			case "prev":
+				app.Send(player.Prev())
+			case "1key":
+				app.Send(player.Me1Key())
+			case "exit":
+				if conf.IsApp {
+					fmt.Println("程序已退出，可以使用shell命令或使用 echo EXIT 退出App")
+				}
+				os.Exit(0)
+			case "wake":
+				timeJob()
+			case "testalarm":
+				player.PlayAlarm()
+			case "savepath":
+				fmt.Println("savepath", conf.Cfg.SavePath)
+			case "ip":
+				ip, _ := app.GetLocalIP()
+				fmt.Println(ip)
+			case "play":
+				// 没有参数时一键播放
+				if player.IsStop {
+					player.Me1Key()
+				} else if player.IsPaused {
+					player.Resume()
+				} else {
+					player.Pause()
+				}
+			case "weather":
+				weather.GetWeather("")
+			default:
+				if strings.HasPrefix(cmd, "play ") {
+					player.PlayUrl(cmd[5:])
+				} else if strings.HasPrefix(cmd, "vol ") {
+					player.SetVol(cmd[4:])
+				} else if strings.HasPrefix(cmd, "echo ") {
+					app.Send(cmd[5:])
+				} else if strings.HasPrefix(cmd, "playlist ") {
+					log.Println("播放歌单", player.PlayPlaylist(cmd[9:], false))
+				} else if strings.HasPrefix(cmd, "playmusic ") {
+					log.Println("播放歌曲")
+					player.PlayPlaymusic(cmd[10:], false)
+				} else if strings.HasPrefix(cmd, "playlistdl ") {
+					nemusic.PlaylistDownload(cmd[11:])
+				} else if strings.HasPrefix(cmd, "touch ") {
+					f, e := os.Create(cmd[6:])
+					f.Close()
+					log.Println(e)
+				} else if strings.HasPrefix(cmd, "rm ") {
+					log.Println(os.Remove(cmd[3:]))
+				} else if strings.HasPrefix(cmd, "savepath ") {
+					if cmd[9:] == "null" {
+						conf.Cfg.SavePath = ""
+					} else {
+						conf.Cfg.SavePath = cmd[9:]
+					}
+					conf.Save()
+					fmt.Println("SavePath已修改为", conf.Cfg.SavePath)
+				} else if strings.HasPrefix(cmd, "stop ") {
+					minF, _ := strconv.ParseFloat(cmd[5:], 64)
+					if minF > 0 {
+						player.StopUnix = time.Now().Unix() + int64(minF*60)
+						fmt.Println("将在", minF, "分钟后停止播放")
+					} else {
+						player.StopUnix = 0
+						fmt.Println("已取消定时停止")
+					}
+				} else {
+					fmt.Println("未知命令", cmd)
+				}
+			}
+			// 丢掉在处理过程中输入的命令(比如疯狂的next会堆积起来)
+			if reader.Buffered() > 0 {
+				reader.Discard(reader.Buffered())
+			}
+		}
+	}
+}
+
+func checkUpdate() {
+	// 检查更新
+	repo := "zanjie1999/workdayAlarmClock"
+	if conf.IsApp {
+		repo += "Android"
+	} else {
+		repo += "Go"
+	}
+	req := httpme.Httpme()
+	resp, err := req.Get("https://api.github.com/repos/" + repo + "/releases/latest")
+	if err == nil {
+		var j map[string]interface{}
+		if err = resp.Json(&j); err == nil {
+			if tag, ok := j["tag_name"].(string); ok && tag != VERSION {
+				fmt.Println("\n发现新版本v" + j["tag_name"].(string) + "，请到https://github.com/" + repo + "/releases下载更新，更新内容：" + j["name"].(string) + "\n")
+			} else {
+				log.Println("当前已是最新版本 开源仓库：https://github.com/" + repo)
+			}
+		} else {
+			log.Println("检查更新失败", err)
+		}
+	} else {
+		log.Println("检查更新失败", err)
+	}
+}
+
+// 强制把当前目录加入PATH
+func addPwd2Path() {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		log.Println("获取当前目录失败，无法更新PATH", err)
+		return
+	}
+	pathValue := os.Getenv("PATH")
+	if pathValue == "" {
+		pathValue = workingDir
+	} else {
+		pathValue = workingDir + string(os.PathListSeparator) + pathValue
+	}
+	if err := os.Setenv("PATH", pathValue); err != nil {
+		log.Println("更新PATH失败", err)
+	}
+}
+
+func main() {
+	addPwd2Path()
+
+	// libWorkdayAlarmClock.so app
+	if len(os.Args) > 1 {
+		if os.Args[1] == "app" {
+			conf.IsApp = true
+			if len(os.Args) > 2 {
+				// 因为经常会只更新android的版本号，所以在app里传过来，方便在日志里显示
+				VERSION = os.Args[2]
+			}
+			httpme.SetDns("223.6.6.6:53")
+			// 全屋同步补偿ms
+			app.SendLocal("DSEEK " + conf.Cfg.DefSeek)
+		} else {
+			player.ShellPlayer = os.Args[1]
+		}
+	}
+	if !conf.IsApp {
+		player.InitDefaultShellPlayer()
+	}
+	// 全局禁用TLS验证 兼容老系统
+	httpme.SetSkipVerify(true)
+
+	if !conf.IsApp {
+		log.Println("使用音乐播放器：", player.ShellPlayer)
+	}
+	conf.Init()
+	// 从配置恢复米家登录凭证
+	if conf.Cfg.MiServiceToken != "" && conf.Cfg.MiSSecurity != "" && conf.Cfg.MiUserID != "" {
+		deviceID := conf.Cfg.MiDeviceID
+		if deviceID == "" {
+			deviceID = mihome.RandomDeviceID()
+			conf.Cfg.MiDeviceID = deviceID
+			conf.Save()
+		}
+		mihome.SetUser(&mihome.User{
+			UserID:       conf.Cfg.MiUserID,
+			SSecurity:    conf.Cfg.MiSSecurity,
+			ServiceToken: conf.Cfg.MiServiceToken,
+			DeviceID:     deviceID,
+		})
+		log.Println("已从配置恢复米家登录凭证")
+	}
+	// 启动睡过头检测监视器
+	if conf.Cfg.OversleepEnable {
+		oversleep.Start()
+	}
+	if conf.IsApp && conf.Cfg.Wakelock {
+		app.SendLocal("WAKELOCK")
+	}
+	if conf.IsApp && len(conf.Cfg.Alarm) > 0 {
+		app.SendLocal("ALARMON")
+	}
+	// 设置时区
+	time.Local = time.FixedZone("UTC+", conf.Cfg.Tz*3600)
+	log.Println("工作咩闹钟 v" + VERSION)
+	log.Println("当前时区", time.Local, conf.Cfg.Tz)
+	conf.WorkDayApi()
+	if !conf.IsApp || conf.IsApp && conf.Cfg.Wakelock {
+		// Android在有闹钟时有每分钟的定时器，在启动Wakelock时将使用双重定时器保证一定会被调用
+		log.Println("内置定时器已启用")
+		go timer()
+	}
+	go shellInput()
+	timeJob()
+	go checkUpdate()
+	run := router.Init("/")
+	port := 8080
+	ip, _ := app.GetLocalIP()
+	for {
+		conf.Port = fmt.Sprintf(":%d", port)
+		if conf.IsApp {
+			fmt.Println("ECHO 访问http://" + ip + conf.Port)
+		}
+		fmt.Println("\n使用浏览器访问 http://" + ip + conf.Port + " 进入后台\n")
+		if err := run.Run(conf.Port); err != nil {
+			port++
+			log.Println("启动失败，端口被占" + conf.Port)
+		}
+	}
+}
