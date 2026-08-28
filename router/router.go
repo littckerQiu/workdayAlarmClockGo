@@ -528,6 +528,72 @@ func Init(urlPrefix string) *gin.Engine {
 		})
 	})
 
+	// 下次闹钟
+	root.GET("/nextAlarm", func(c *gin.Context) {
+		now := time.Now()
+		type nextInfo struct {
+			Time    string `json:"time"`
+			Seconds int    `json:"seconds"`
+			HasAlarm bool  `json:"hasAlarm"`
+		}
+		result := nextInfo{HasAlarm: false}
+		var bestTime time.Time
+		found := false
+		for hhmm, dayTypes := range conf.Cfg.Alarm {
+			if len(hhmm) != 4 {
+				continue
+			}
+			h, err1 := strconv.Atoi(hhmm[:2])
+			m, err2 := strconv.Atoi(hhmm[2:])
+			if err1 != nil || err2 != nil || h > 23 || m > 59 {
+				continue
+			}
+			for dayOffset := 0; dayOffset < 8; dayOffset++ {
+				checkDay := now.AddDate(0, 0, dayOffset)
+				checkTime := time.Date(checkDay.Year(), checkDay.Month(), checkDay.Day(), h, m, 0, 0, now.Location())
+				if checkTime.Before(now) || checkTime.Equal(now) {
+					continue
+				}
+				weekday := int(checkDay.Weekday()) // 0=Sun
+				isWorkDay := weekday != 0 && weekday != 6
+				matches := false
+				for _, dt := range dayTypes {
+					switch dt {
+					case "1":
+						if isWorkDay {
+							matches = true
+						}
+					case "2":
+						if !isWorkDay {
+							matches = true
+						}
+					case "3", "4":
+						matches = true
+					case "5", "6", "7", "8", "9", "10", "11":
+						dtn, _ := strconv.Atoi(dt)
+						if dtn-5 == weekday {
+							matches = true
+						}
+					}
+					if matches {
+						break
+					}
+				}
+				if matches && (!found || checkTime.Before(bestTime)) {
+					bestTime = checkTime
+					found = true
+				}
+				break
+			}
+		}
+		if found {
+			result.HasAlarm = true
+			result.Time = bestTime.Format("15:04")
+			result.Seconds = int(bestTime.Sub(now).Seconds())
+		}
+		c.JSON(200, result)
+	})
+
 	// 天气api
 	root.GET("/getWeatherCityCode", func(c *gin.Context) {
 		q := c.Query("q")

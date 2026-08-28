@@ -209,11 +209,11 @@ func shellInput() {
 
 func checkUpdate() {
 	// 检查更新
-	repo := "zanjie1999/workdayAlarmClock"
+	var repo string
 	if conf.IsApp {
-		repo += "Android"
+		repo = "littckerQiu/workdayAlarmClockAndroid"
 	} else {
-		repo += "Go"
+		repo = "littckerQiu/workdayAlarmClockGo"
 	}
 	req := httpme.Httpme()
 	resp, err := req.Get("https://api.github.com/repos/" + repo + "/releases/latest")
