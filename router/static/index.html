@@ -3,150 +3,242 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0f1117">
+<meta name="theme-color" content="#0a0a0f">
 <title>闹钟</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;width:100%;}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#0f1117;color:#e4e6eb;overflow-x:hidden;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;position:fixed;top:0;left:0;right:0;bottom:0;}
-.topbar{flex-shrink:0;padding:14px 20px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06);background:rgba(15,17,23,0.95);z-index:10;}
-.topbar h1{font-size:17px;font-weight:600;letter-spacing:0.5px;}
-.topbar .sub{font-size:12px;color:rgba(228,230,235,0.45);margin-top:2px;}
-.content{-webkit-box-flex:1;-webkit-flex:1;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:calc(80px + env(safe-area-inset-bottom));}
+:root{
+  --bg:#0a0a0f;
+  --bg2:#12121a;
+  --glass:rgba(255,255,255,0.06);
+  --glass2:rgba(255,255,255,0.09);
+  --glass-border:rgba(255,255,255,0.1);
+  --glass-highlight:rgba(255,255,255,0.08);
+  --text:#f0f0f5;
+  --text2:rgba(240,240,245,0.55);
+  --text3:rgba(240,240,245,0.35);
+  --accent:#f59e0b;
+  --accent2:#ef4444;
+  --accent-grad:linear-gradient(135deg,#f59e0b,#ef4444);
+  --ok:#34d399;
+  --warn:#fbbf24;
+  --err:#f87171;
+  --radius:20px;
+  --spring:cubic-bezier(0.34,1.56,0.64,1);
+  --ease:cubic-bezier(0.22,1,0.36,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;}
+html,body{height:100%;width:100%;overflow:hidden;}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);position:fixed;top:0;left:0;right:0;bottom:0;}
+
+/* 渐变光球背景 */
+.bg-orbs{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;pointer-events:none;}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.35;}
+.orb1{width:300px;height:300px;background:#f59e0b;top:-80px;right:-60px;-webkit-animation:float1 18s ease-in-out infinite;animation:float1 18s ease-in-out infinite;}
+.orb2{width:260px;height:260px;background:#8b5cf6;bottom:-60px;left:-50px;-webkit-animation:float2 22s ease-in-out infinite;animation:float2 22s ease-in-out infinite;}
+.orb3{width:200px;height:200px;background:#ef4444;top:40%;left:50%;-webkit-animation:float3 25s ease-in-out infinite;animation:float3 25s ease-in-out infinite;opacity:0.2;}
+@-webkit-keyframes float1{0%,100%{-webkit-transform:translate(0,0);}50%{-webkit-transform:translate(-40px,60px);}}
+@keyframes float1{0%,100%{transform:translate(0,0);}50%{transform:translate(-40px,60px);}}
+@-webkit-keyframes float2{0%,100%{-webkit-transform:translate(0,0);}50%{-webkit-transform:translate(50px,-40px);}}
+@keyframes float2{0%,100%{transform:translate(0,0);}50%{transform:translate(50px,-40px);}}
+@-webkit-keyframes float3{0%,100%{-webkit-transform:translate(-50%,-50%) scale(1);}50%{-webkit-transform:translate(-30%,-70%) scale(1.2);}}
+@keyframes float3{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-30%,-70%) scale(1.2);}}
+
+/* 玻璃卡片 */
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,0.3),inset 0 1px 0 var(--glass-highlight);}
+.glass-sm{background:var(--glass);-webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%);border:1px solid var(--glass-border);border-radius:14px;}
+
+/* 顶栏 */
+.topbar{position:relative;z-index:10;flex-shrink:0;padding:calc(env(safe-area-inset-top) + 14px) 20px 14px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;background:rgba(10,10,15,0.6);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--glass-border);}
+.topbar h1{font-size:18px;font-weight:600;letter-spacing:0.3px;}
+.topbar .sub{font-size:11px;color:var(--text3);margin-top:1px;}
+
+/* 内容区 */
+.content{position:relative;z-index:1;-webkit-box-flex:1;-webkit-flex:1;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:calc(90px + env(safe-area-inset-bottom));}
 .tab-page{display:none;}
-.tab-page.active{display:block;-webkit-animation:fadeIn 0.25s ease;animation:fadeIn 0.25s ease;}
-@-webkit-keyframes fadeIn{from{opacity:0;-webkit-transform:translateY(6px);}to{opacity:1;-webkit-transform:translateY(0);}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-.tabbar{flex-shrink:0;display:-webkit-box;display:-webkit-flex;display:flex;border-top:1px solid rgba(255,255,255,0.06);background:rgba(15,17,23,0.98);padding-bottom:env(safe-area-inset-bottom);}
-.tab-btn{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;padding:10px 4px 8px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;align-items:center;cursor:pointer;color:rgba(228,230,235,0.4);-webkit-transition:color 0.2s;transition:color 0.2s;font-size:11px;gap:3px;}
-.tab-btn .icon{font-size:22px;line-height:1;}
-.tab-btn.active{color:#7c8cff;}
-.card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px;margin-bottom:14px;}
-.card-title{font-size:13px;font-weight:600;color:rgba(228,230,235,0.6);letter-spacing:0.5px;margin-bottom:14px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:6px;}
+.tab-page.active{display:block;}
+.tab-page.active .stagger{-webkit-animation:staggerIn 0.5s var(--ease) both;animation:staggerIn 0.5s var(--ease) both;}
+.tab-page.active .stagger:nth-child(1){-webkit-animation-delay:0.03s;animation-delay:0.03s;}
+.tab-page.active .stagger:nth-child(2){-webkit-animation-delay:0.08s;animation-delay:0.08s;}
+.tab-page.active .stagger:nth-child(3){-webkit-animation-delay:0.13s;animation-delay:0.13s;}
+.tab-page.active .stagger:nth-child(4){-webkit-animation-delay:0.18s;animation-delay:0.18s;}
+.tab-page.active .stagger:nth-child(5){-webkit-animation-delay:0.23s;animation-delay:0.23s;}
+.tab-page.active .stagger:nth-child(6){-webkit-animation-delay:0.28s;animation-delay:0.28s;}
+@-webkit-keyframes staggerIn{from{opacity:0;-webkit-transform:translateY(16px);}to{opacity:1;-webkit-transform:translateY(0);}}
+@keyframes staggerIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+/* 底部导航 */
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:20;display:-webkit-box;display:-webkit-flex;display:flex;padding:8px 16px calc(env(safe-area-inset-bottom) + 8px);background:rgba(10,10,15,0.7);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border-top:1px solid var(--glass-border);}
+.tab-btn{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;padding:8px 4px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;align-items:center;cursor:pointer;color:var(--text3);-webkit-transition:color 0.3s var(--ease);transition:color 0.3s var(--ease);font-size:10px;gap:3px;border-radius:12px;}
+.tab-btn .icon{font-size:22px;line-height:1;-webkit-transition:-webkit-transform 0.3s var(--spring);transition:transform 0.3s var(--spring);}
+.tab-btn.active{color:var(--accent);}
+.tab-btn.active .icon{-webkit-transform:scale(1.15);transform:scale(1.15);}
+
 /* 时钟 */
-.clock-wrap{text-align:center;padding:10px 0 6px;}
-.clock-time{font-size:56px;font-weight:200;letter-spacing:2px;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,#fff,#a5b4fc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;}
-.clock-time .colon{opacity:0.6;}
-.clock-date{font-size:13px;color:rgba(228,230,235,0.45);margin-top:4px;letter-spacing:1px;}
+.clock-wrap{text-align:center;padding:8px 0 4px;}
+.clock-time{font-size:64px;font-weight:100;letter-spacing:1px;font-variant-numeric:tabular-nums;line-height:1.1;background:linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.6) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.clock-time .colon{opacity:0.5;-webkit-animation:blink 1s step-end infinite;animation:blink 1s step-end infinite;}
+@-webkit-keyframes blink{0%,100%{opacity:0.5;}50%{opacity:0.15;}}
+@keyframes blink{0%,100%{opacity:0.5;}50%{opacity:0.15;}}
+.clock-date{font-size:13px;color:var(--text2);margin-top:4px;letter-spacing:0.5px;}
+
+/* 卡片标题 */
+.card{padding:18px;margin-bottom:14px;position:relative;overflow:hidden;}
+.card-title{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:14px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:6px;}
+
+/* 下次闹钟 */
 .next-alarm{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;}
-.next-alarm .time{font-size:26px;font-weight:300;font-variant-numeric:tabular-nums;}
-.next-alarm .countdown{font-size:12px;color:rgba(228,230,235,0.5);margin-top:2px;}
-.next-alarm .icon{font-size:26px;}
+.next-alarm .time{font-size:30px;font-weight:200;font-variant-numeric:tabular-nums;}
+.next-alarm .countdown{font-size:12px;color:var(--text2);margin-top:2px;}
+.next-alarm .icon-wrap{width:48px;height:48px;border-radius:14px;background:var(--accent-grad);display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(245,158,11,0.3);}
+.empty-text{text-align:center;color:var(--text3);padding:12px 0;font-size:13px;}
+
+/* 智能状态 */
+.smart-status{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:12px;}
+.smart-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.smart-dot.on{background:var(--ok);box-shadow:0 0 12px rgba(52,211,153,0.5);}
+.smart-dot.off{background:rgba(255,255,255,0.15);}
+.smart-dot.warn{background:var(--err);box-shadow:0 0 12px rgba(248,113,113,0.5);-webkit-animation:pulse 1.5s ease-in-out infinite;animation:pulse 1.5s ease-in-out infinite;}
+@-webkit-keyframes pulse{0%,100%{opacity:1;-webkit-transform:scale(1);}50%{opacity:0.5;-webkit-transform:scale(0.85);}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.85);}}
+.smart-text{font-size:15px;font-weight:500;}
+.smart-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+
 /* 播放控制 */
-.ctrl-row{display:-webkit-box;display:-webkit-flex;display:flex;gap:8px;margin-bottom:10px;}
-.ctrl-btn{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;padding:10px 4px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:#e4e6eb;font-size:12px;cursor:pointer;-webkit-transition:all 0.15s;transition:all 0.15s;font-family:inherit;}
-.ctrl-btn:active{-webkit-transform:scale(0.95);transform:scale(0.95);background:rgba(124,140,255,0.2);}
-.ctrl-btn.danger{background:rgba(239,68,68,0.15);color:#fca5a5;}
-.now-playing{font-size:13px;color:rgba(228,230,235,0.7);margin-bottom:8px;line-height:1.5;}
-.now-playing a{color:#7c8cff;text-decoration:none;}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;}
-.badge-ok{background:rgba(74,222,128,0.12);color:#86efac;}
-.badge-warn{background:rgba(250,204,21,0.12);color:#fde047;}
-.badge-err{background:rgba(248,113,113,0.12);color:#fca5a5;}
+.now-playing{font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6;min-height:20px;}
+.now-playing a{color:var(--accent);text-decoration:none;}
+.ctrl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.ctrl-btn{padding:12px 4px;border-radius:12px;border:none;background:var(--glass2);color:var(--text);font-size:11px;cursor:pointer;-webkit-transition:all 0.2s var(--spring);transition:all 0.2s var(--spring);font-family:inherit;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:4px;}
+.ctrl-btn .ci{font-size:18px;}
+.ctrl-btn:active{-webkit-transform:scale(0.92);transform:scale(0.92);background:rgba(245,158,11,0.2);}
+.ctrl-btn.danger{background:rgba(239,68,68,0.12);color:var(--err);}
+
 /* 音量 */
-.vol-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:12px;}
-.vol-slider{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);outline:none;}
-.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#7c8cff;cursor:pointer;box-shadow:0 2px 6px rgba(124,140,255,0.4);}
-.vol-num{font-size:14px;color:rgba(228,230,235,0.6);min-width:32px;text-align:right;font-variant-numeric:tabular-nums;}
+.vol-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:14px;}
+.vol-slider{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:rgba(255,255,255,0.1);outline:none;}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent-grad);cursor:pointer;box-shadow:0 2px 8px rgba(245,158,11,0.4);border:2px solid rgba(255,255,255,0.2);}
+.vol-num{font-size:15px;color:var(--text2);min-width:36px;text-align:right;font-variant-numeric:tabular-nums;font-weight:500;}
+
 /* 快捷链接 */
 .link-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:8px;}
-.link-btn{padding:8px 12px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#e4e6eb;font-size:12px;cursor:pointer;text-decoration:none;-webkit-transition:all 0.15s;transition:all 0.15s;}
-.link-btn:active{background:rgba(124,140,255,0.2);}
+.link-btn{padding:10px 14px;border-radius:12px;background:var(--glass2);border:1px solid var(--glass-border);color:var(--text);font-size:12px;cursor:pointer;text-decoration:none;-webkit-transition:all 0.2s var(--spring);transition:all 0.2s var(--spring);display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:5px;}
+.link-btn:active{-webkit-transform:scale(0.94);transform:scale(0.94);background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.3);}
+
 /* 表单 */
 .form-group{margin-bottom:14px;}
 .form-group:last-child{margin-bottom:0;}
-.form-label{font-size:13px;color:rgba(228,230,235,0.55);margin-bottom:6px;display:block;}
-.form-input{width:100%;max-width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;color:#e4e6eb;font-size:14px;font-family:inherit;outline:none;-webkit-transition:border-color 0.2s;transition:border-color 0.2s;}
-.form-input:focus{border-color:rgba(124,140,255,0.5);}
-.form-input::placeholder{color:rgba(228,230,235,0.3);}
-select.form-input{cursor:pointer;}
-select.form-input option{background:#1a1d27;color:#e4e6eb;}
-.form-row{display:-webkit-box;display:-webkit-flex;display:flex;gap:8px;margin-bottom:14px;}
+.form-label{font-size:12px;color:var(--text2);margin-bottom:6px;display:block;font-weight:500;}
+.form-input{width:100%;max-width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;-webkit-transition:border-color 0.2s,box-shadow 0.2s;transition:border-color 0.2s,box-shadow 0.2s;}
+.form-input:focus{border-color:rgba(245,158,11,0.5);box-shadow:0 0 0 3px rgba(245,158,11,0.1);}
+.form-input::placeholder{color:var(--text3);}
+select.form-input{cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;}
+select.form-input option{background:#1a1a24;color:var(--text);}
+.form-row{display:-webkit-box;display:-webkit-flex;display:flex;gap:10px;margin-bottom:14px;}
 .form-row > *{min-width:0;-webkit-box-flex:1;-webkit-flex:1;flex:1;}
 .form-row .form-input{width:100%;}
-.checkbox-inline{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:6px;font-size:13px;color:rgba(228,230,235,0.7);cursor:pointer;padding:6px 0;}
+
 /* 开关 */
-.switch-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;padding:12px 0;}
+.switch-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;padding:4px 0;}
 .switch-label{font-size:14px;font-weight:500;}
-.switch-desc{font-size:11px;color:rgba(228,230,235,0.4);margin-top:2px;}
-.switch{position:relative;width:44px;height:26px;flex-shrink:0;background:rgba(255,255,255,0.12);border-radius:13px;cursor:pointer;-webkit-transition:background 0.25s;transition:background 0.25s;}
-.switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;-webkit-transition:-webkit-transform 0.25s;transition:transform 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.3);}
-.switch.on{background:#6366f1;}
-.switch.on::after{-webkit-transform:translateX(18px);transform:translateX(18px);}
-.hidden-section{display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);}
-.hidden-section.show{display:block;-webkit-animation:slideDown 0.3s ease;animation:slideDown 0.3s ease;}
-@-webkit-keyframes slideDown{from{opacity:0;-webkit-transform:translateY(-8px);}to{opacity:1;-webkit-transform:translateY(0);}}
-@keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.switch-desc{font-size:11px;color:var(--text3);margin-top:2px;}
+.switch{position:relative;width:48px;height:28px;flex-shrink:0;background:rgba(255,255,255,0.12);border-radius:14px;cursor:pointer;-webkit-transition:background 0.3s var(--ease);transition:background 0.3s var(--ease);}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;-webkit-transition:-webkit-transform 0.35s var(--spring);transition:transform 0.35s var(--spring);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.switch.on{background:var(--accent-grad);}
+.switch.on::after{-webkit-transform:translateX(20px);transform:translateX(20px);}
+.hidden-section{display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--glass-border);}
+.hidden-section.show{display:block;-webkit-animation:slideDown 0.4s var(--ease);animation:slideDown 0.4s var(--ease);}
+@-webkit-keyframes slideDown{from{opacity:0;-webkit-transform:translateY(-10px);}to{opacity:1;-webkit-transform:translateY(0);}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+
 /* 按钮 */
-.btn{display:inline-block;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;-webkit-transition:all 0.2s;transition:all 0.2s;text-align:center;}
-.btn:active{-webkit-transform:scale(0.97);transform:scale(0.97);}
-.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;}
-.btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;}
-.btn-ghost{background:rgba(255,255,255,0.06);color:#e4e6eb;border:1px solid rgba(255,255,255,0.1);}
-.btn-sm{padding:8px 14px;font-size:12px;border-radius:8px;}
+.btn{display:inline-block;border:none;border-radius:14px;padding:13px 22px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;-webkit-transition:all 0.25s var(--spring);transition:all 0.25s var(--spring);text-align:center;}
+.btn:active{-webkit-transform:scale(0.96);transform:scale(0.96);}
+.btn-primary{background:var(--accent-grad);color:#fff;box-shadow:0 4px 16px rgba(245,158,11,0.3);}
+.btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 16px rgba(239,68,68,0.3);}
+.btn-ghost{background:var(--glass2);color:var(--text);border:1px solid var(--glass-border);}
+.btn-sm{padding:8px 14px;font-size:12px;border-radius:10px;}
 .btn-block{display:block;width:100%;}
+
 /* 闹钟列表 */
-.alarm-item{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;padding:14px 16px;background:rgba(255,255,255,0.03);border-radius:12px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.05);}
-.alarm-item .time{font-size:22px;font-weight:300;font-variant-numeric:tabular-nums;}
-.alarm-item .days{font-size:11px;color:rgba(228,230,235,0.4);margin-top:2px;}
-.alarm-empty{text-align:center;padding:24px 0;color:rgba(228,230,235,0.35);font-size:13px;}
-/* 智能状态 */
-.smart-status{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:10px;}
-.smart-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.smart-dot.on{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.5);}
-.smart-dot.off{background:rgba(255,255,255,0.2);}
-.smart-dot.warn{background:#f87171;box-shadow:0 0 8px rgba(248,113,113,0.5);-webkit-animation:pulse 1.5s infinite;animation:pulse 1.5s infinite;}
-@-webkit-keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
-.smart-text{font-size:14px;font-weight:500;}
-.smart-sub{font-size:12px;color:rgba(228,230,235,0.4);margin-top:2px;}
+.alarm-item{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;margin-bottom:10px;-webkit-animation:itemIn 0.4s var(--ease) both;animation:itemIn 0.4s var(--ease) both;}
+@-webkit-keyframes itemIn{from{opacity:0;-webkit-transform:translateX(-12px);}to{opacity:1;-webkit-transform:translateX(0);}}
+@keyframes itemIn{from{opacity:0;transform:translateX(-12px);}to{opacity:1;transform:translateX(0);}}
+.alarm-item .time{font-size:28px;font-weight:200;font-variant-numeric:tabular-nums;}
+.alarm-item .days{font-size:11px;color:var(--text2);margin-top:2px;}
+.alarm-empty{text-align:center;padding:32px 0;color:var(--text3);font-size:13px;}
+
+/* 徽章 */
+.badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:0.3px;}
+.badge-ok{background:rgba(52,211,153,0.12);color:var(--ok);border:1px solid rgba(52,211,153,0.2);}
+.badge-warn{background:rgba(251,191,36,0.12);color:var(--warn);border:1px solid rgba(251,191,36,0.2);}
+.badge-err{background:rgba(248,113,113,0.12);color:var(--err);border:1px solid rgba(248,113,113,0.2);}
+
 /* 区间 */
 .interval-item{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:8px;margin-bottom:8px;}
-.interval-item .form-input{max-width:90px;text-align:center;}
-.interval-sep{color:rgba(228,230,235,0.35);font-size:13px;flex-shrink:0;}
-.interval-del{width:30px;height:30px;border-radius:8px;border:none;background:rgba(239,68,68,0.12);color:#f87171;cursor:pointer;font-size:14px;flex-shrink:0;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;}
+.interval-item .form-input{max-width:80px;text-align:center;font-variant-numeric:tabular-nums;}
+.interval-sep{color:var(--text3);font-size:13px;flex-shrink:0;}
+.interval-del{width:32px;height:32px;border-radius:10px;border:none;background:rgba(239,68,68,0.1);color:var(--err);cursor:pointer;font-size:16px;flex-shrink:0;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;-webkit-transition:all 0.2s;transition:all 0.2s;}
+.interval-del:active{-webkit-transform:scale(0.88);transform:scale(0.88);}
+
 /* 二维码 */
 .qr-box{text-align:center;padding:16px;}
-.qr-box #qrCodeImg{display:inline-block;padding:10px;background:#fff;border-radius:12px;}
-.qr-tip{font-size:12px;color:rgba(228,230,235,0.5);margin-top:12px;}
+.qr-box #qrCodeImg{display:inline-block;padding:12px;background:#fff;border-radius:16px;}
+.qr-tip{font-size:12px;color:var(--text2);margin-top:14px;}
+
+/* 设备状态 */
+.device-status-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:10px;margin-top:10px;}
+.refresh-btn{width:32px;height:32px;border-radius:10px;border:none;background:var(--glass2);color:var(--text2);cursor:pointer;font-size:14px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;flex-shrink:0;-webkit-transition:all 0.3s var(--spring);transition:all 0.3s var(--spring);}
+.refresh-btn:active{-webkit-transform:rotate(180deg) scale(0.9);transform:rotate(180deg) scale(0.9);}
+
 /* 模态框 */
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:none;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;z-index:1000;padding:20px;}
-.modal-overlay.show{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-animation:fadeIn 0.2s ease;animation:fadeIn 0.2s ease;}
-.modal{background:#1a1d27;border-radius:18px;padding:24px;width:100%;max-width:340px;border:1px solid rgba(255,255,255,0.08);-webkit-animation:modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);animation:modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);max-height:85vh;overflow-y:auto;overflow-x:hidden;}
-@-webkit-keyframes modalIn{from{opacity:0;-webkit-transform:scale(0.9);}to{opacity:1;-webkit-transform:scale(1);}}
-@keyframes modalIn{from{opacity:0;transform:scale(0.9);}to{opacity:1;transform:scale(1);}}
-.modal h3{font-size:17px;font-weight:600;margin-bottom:16px;}
-.modal p{font-size:13px;color:rgba(228,230,235,0.65);line-height:1.6;margin-bottom:8px;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:none;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;z-index:1000;padding:20px;}
+.modal-overlay.show{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-animation:fadeIn 0.25s ease;animation:fadeIn 0.25s ease;}
+@-webkit-keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.modal{background:var(--bg2);border-radius:24px;padding:24px;width:100%;max-width:340px;border:1px solid var(--glass-border);box-shadow:0 24px 64px rgba(0,0,0,0.5);-webkit-animation:modalIn 0.4s var(--spring);animation:modalIn 0.4s var(--spring);max-height:85vh;overflow-y:auto;overflow-x:hidden;}
+@-webkit-keyframes modalIn{from{opacity:0;-webkit-transform:scale(0.85) translateY(20px);}to{opacity:1;-webkit-transform:scale(1) translateY(0);}}
+@keyframes modalIn{from{opacity:0;transform:scale(0.85) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal h3{font-size:18px;font-weight:600;margin-bottom:16px;}
+.modal p{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:8px;}
 .modal .modal-actions{display:-webkit-box;display:-webkit-flex;display:flex;gap:10px;margin-top:20px;}
 .modal .modal-actions .btn{-webkit-box-flex:1;-webkit-flex:1;flex:1;}
+
 /* 时间选择器 */
-.time-picker{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;gap:12px;margin:16px 0;}
-.tp-col{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:6px;}
-.tp-label{font-size:11px;color:rgba(228,230,235,0.4);}
-.tp-display{font-size:38px;font-weight:200;font-variant-numeric:tabular-nums;min-width:64px;text-align:center;background:rgba(255,255,255,0.05);border-radius:12px;padding:6px 0;}
-.tp-sep{font-size:28px;color:rgba(228,230,235,0.3);padding-bottom:18px;}
+.time-picker{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;gap:14px;margin:18px 0;}
+.tp-col{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:8px;}
+.tp-label{font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;}
+.tp-display{font-size:42px;font-weight:100;font-variant-numeric:tabular-nums;min-width:72px;text-align:center;background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:8px 0;box-shadow:inset 0 2px 8px rgba(0,0,0,0.2);}
+.tp-sep{font-size:32px;color:var(--text3);padding-bottom:24px;font-weight:100;}
 .tp-btns{display:-webkit-box;display:-webkit-flex;display:flex;gap:6px;}
-.tp-btn{width:34px;height:30px;border-radius:8px;border:none;background:rgba(255,255,255,0.08);color:#e4e6eb;font-size:16px;cursor:pointer;-webkit-transition:all 0.15s;transition:all 0.15s;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;font-family:inherit;}
-.tp-btn:active{-webkit-transform:scale(0.9);transform:scale(0.9);background:rgba(124,140,255,0.3);}
-.tp-btn.fine{width:28px;height:26px;font-size:12px;background:rgba(255,255,255,0.05);}
-/* 胶囊选择 */
-.type-pills{display:-webkit-box;display:-webkit-flex;display:flex;gap:6px;margin-bottom:12px;}
-.type-pill{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;padding:10px 4px;text-align:center;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:12px;cursor:pointer;-webkit-transition:all 0.2s;transition:all 0.2s;user-select:none;}
-.type-pill.selected{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:transparent;color:#fff;}
+.tp-btn{width:38px;height:32px;border-radius:10px;border:none;background:var(--glass2);color:var(--text);font-size:16px;cursor:pointer;-webkit-transition:all 0.2s var(--spring);transition:all 0.2s var(--spring);display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;font-family:inherit;font-weight:500;}
+.tp-btn:active{-webkit-transform:scale(0.85);transform:scale(0.85);background:rgba(245,158,11,0.25);}
+.tp-btn.fine{width:30px;height:26px;font-size:11px;background:var(--glass);color:var(--text2);}
+
+/* 类型胶囊 */
+.type-pills{display:-webkit-box;display:-webkit-flex;display:flex;gap:8px;margin-bottom:12px;}
+.type-pill{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;padding:11px 4px;text-align:center;border-radius:12px;background:var(--glass);border:1px solid var(--glass-border);font-size:13px;cursor:pointer;-webkit-transition:all 0.25s var(--spring);transition:all 0.25s var(--spring);user-select:none;font-weight:500;color:var(--text2);}
+.type-pill.selected{background:var(--accent-grad);border-color:transparent;color:#fff;box-shadow:0 4px 12px rgba(245,158,11,0.25);}
 .day-pills{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:6px;}
-.day-pill{padding:8px 0;min-width:36px;text-align:center;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:13px;cursor:pointer;-webkit-transition:all 0.2s;transition:all 0.2s;user-select:none;}
-.day-pill.selected{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:transparent;color:#fff;}
-/* 设备状态行 */
-.device-status-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:8px;margin-top:8px;}
-.refresh-btn{width:28px;height:28px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:#e4e6eb;cursor:pointer;font-size:14px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;flex-shrink:0;}
-.refresh-btn:active{-webkit-transform:rotate(180deg);transform:rotate(180deg);-webkit-transition:transform 0.3s;transition:transform 0.3s;}
-.toast{position:fixed;top:50%;left:50%;-webkit-transform:translate(-50%,-50%);transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;z-index:2000;display:none;}
-.toast.show{display:block;-webkit-animation:fadeIn 0.2s ease;animation:fadeIn 0.2s ease;}
-.hint{font-size:11px;color:rgba(228,230,235,0.35);margin-top:4px;line-height:1.5;}
-@media(max-width:360px){.clock-time{font-size:48px;}.content{padding:12px;}.card{padding:14px;}}
+.day-pill{padding:9px 0;min-width:40px;-webkit-box-flex:1;-webkit-flex:1;flex:1;text-align:center;border-radius:10px;background:var(--glass);border:1px solid var(--glass-border);font-size:13px;cursor:pointer;-webkit-transition:all 0.25s var(--spring);transition:all 0.25s var(--spring);user-select:none;color:var(--text2);font-weight:500;}
+.day-pill.selected{background:var(--accent-grad);border-color:transparent;color:#fff;box-shadow:0 3px 10px rgba(245,158,11,0.25);}
+
+/* Toast */
+.toast{position:fixed;top:50%;left:50%;-webkit-transform:translate(-50%,-50%);transform:translate(-50%,-50%);background:rgba(20,20,28,0.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);color:#fff;padding:14px 28px;border-radius:16px;font-size:14px;z-index:2000;display:none;border:1px solid var(--glass-border);box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+.toast.show{display:block;-webkit-animation:toastIn 0.3s var(--spring);animation:toastIn 0.3s var(--spring);}
+@-webkit-keyframes toastIn{from{opacity:0;-webkit-transform:translate(-50%,-50%) scale(0.8);}to{opacity:1;-webkit-transform:translate(-50%,-50%) scale(1);}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.8);}to{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+
+.hint{font-size:11px;color:var(--text3);margin-top:5px;line-height:1.5;}
+.checkbox-inline{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;padding:5px 0;}
+.checkbox-inline input[type="checkbox"]{width:18px;height:18px;border-radius:5px;-webkit-appearance:none;appearance:none;background:var(--glass);border:1px solid var(--glass-border);cursor:pointer;position:relative;-webkit-transition:all 0.2s;transition:all 0.2s;flex-shrink:0;}
+.checkbox-inline input[type="checkbox"]:checked{background:var(--accent-grad);border-color:transparent;}
+.checkbox-inline input[type="checkbox"]:checked::after{content:'';position:absolute;top:3px;left:5px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;-webkit-transform:rotate(45deg);transform:rotate(45deg);}
+
+@media(max-width:360px){.clock-time{font-size:52px;}.content{padding:12px;}.card{padding:14px;}.ctrl-grid{grid-template-columns:repeat(3,1fr);}}
 </style>
 </head>
 <body>
+
+<div class="bg-orbs"><div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div></div>
 
 <div class="topbar">
   <div><h1 id="topTitle">闹钟</h1><div class="sub" id="topSub"></div></div>
@@ -157,21 +249,21 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
 
   <!-- 时钟页 -->
   <div class="tab-page active" id="page-clock">
-    <div class="clock-wrap">
+    <div class="clock-wrap stagger">
       <div class="clock-time"><span id="tH">00</span><span class="colon">:</span><span id="tM">00</span><span class="colon">:</span><span id="tS">00</span></div>
       <div class="clock-date" id="tDate">--</div>
     </div>
 
-    <div class="card">
+    <div class="card glass stagger">
       <div class="card-title">&#9201; 下次闹钟</div>
       <div class="next-alarm" id="nextAlarmBox" style="display:none;">
         <div><div class="time" id="nextAlarmTime">--:--</div><div class="countdown" id="nextAlarmCountdown">--</div></div>
-        <div class="icon">&#9200;</div>
+        <div class="icon-wrap">&#9200;</div>
       </div>
-      <div id="noAlarm" style="text-align:center;color:rgba(228,230,235,0.35);padding:8px 0;font-size:13px;">暂无闹钟</div>
+      <div id="noAlarm" class="empty-text" style="display:none;">暂无闹钟</div>
     </div>
 
-    <div class="card" id="smartCard" style="display:none;">
+    <div class="card glass stagger" id="smartCard" style="display:none;">
       <div class="card-title">&#129302; 智能闹钟</div>
       <div class="smart-status">
         <div class="smart-dot" id="smartDot"></div>
@@ -179,40 +271,38 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
       </div>
     </div>
 
-    <div class="card">
+    <div class="card glass stagger">
       <div class="card-title">&#127911; 播放控制</div>
       <div class="now-playing" id="nowPlaying">待机中</div>
-      <div class="ctrl-row">
-        <button class="ctrl-btn danger" onclick="doAction('/stop')">&#9632; 停止</button>
-        <button class="ctrl-btn" onclick="doAction('/pause')">&#10074;&#10074; 暂停</button>
-        <button class="ctrl-btn" onclick="doAction('/resume')">&#9654; 恢复</button>
-      </div>
-      <div class="ctrl-row">
-        <button class="ctrl-btn" onclick="doAction('/prev')">&#9198; 上一首</button>
-        <button class="ctrl-btn" onclick="doAction('/next')">&#9197; 下一首</button>
-        <button class="ctrl-btn" onclick="doAction('/volm')">&#128263; 音量-</button>
-        <button class="ctrl-btn" onclick="doAction('/volp')">&#128262; 音量+</button>
+      <div class="ctrl-grid">
+        <button class="ctrl-btn danger" onclick="doAction('/stop')"><span class="ci">&#9632;</span>停止</button>
+        <button class="ctrl-btn" onclick="doAction('/pause')"><span class="ci">&#10074;&#10074;</span>暂停</button>
+        <button class="ctrl-btn" onclick="doAction('/resume')"><span class="ci">&#9654;</span>恢复</button>
+        <button class="ctrl-btn" onclick="doAction('/prev')"><span class="ci">&#9198;</span>上一首</button>
+        <button class="ctrl-btn" onclick="doAction('/next')"><span class="ci">&#9197;</span>下一首</button>
+        <button class="ctrl-btn" onclick="doAction('/volm')"><span class="ci">&#128263;</span>音量-</button>
+        <button class="ctrl-btn" onclick="doAction('/volp')"><span class="ci">&#128262;</span>音量+</button>
+        <button class="ctrl-btn" onclick="openCamera()"><span class="ci">&#128247;</span>摄像头</button>
       </div>
     </div>
 
-    <div class="card">
+    <div class="card glass stagger">
       <div class="card-title">&#128266; 音量</div>
       <div class="vol-row"><input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="50"><span class="vol-num" id="volNum">50</span></div>
     </div>
 
-    <div class="card">
+    <div class="card glass stagger">
       <div class="card-title">&#9202; 定时停止</div>
-      <div class="form-row" style="margin-bottom:0;">
-        <input type="text" class="form-input" id="timeStopMin" value="30" style="max-width:80px;">
-        <span style="font-size:13px;color:rgba(228,230,235,0.5);display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;">分钟后停止</span>
-        <button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:70px;" onclick="timeStop()">设定</button>
+      <div class="form-row" style="margin-bottom:0;-webkit-box-align:center;-webkit-align-items:center;align-items:center;">
+        <input type="text" class="form-input" id="timeStopMin" value="30" style="max-width:80px;text-align:center;">
+        <span style="font-size:13px;color:var(--text2);">分钟后停止</span>
+        <button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:60px;" onclick="timeStop()">设定</button>
       </div>
     </div>
 
-    <div class="card">
+    <div class="card glass stagger">
       <div class="card-title">&#128279; 快捷操作</div>
       <div class="link-row">
-        <a class="link-btn" href="javascript:openCamera()">&#128247; 摄像头</a>
         <a class="link-btn" href="javascript:doAction('/restart')">&#128260; 重启</a>
         <a class="link-btn" href="javascript:doAction('/echo?msg=SCREENON')">&#128241; 亮屏</a>
         <a class="link-btn" href="javascript:doAction('/echo?msg=SCREENOFF')">&#127770; 熄屏</a>
@@ -220,21 +310,21 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
       </div>
     </div>
 
-    <div class="card" id="stopCard" style="display:none;">
+    <div class="card glass stagger" id="stopCard" style="display:none;">
       <button class="btn btn-danger btn-block" onclick="stopAlarm()">&#9632; 停止闹钟</button>
     </div>
   </div>
 
   <!-- 闹钟页 -->
   <div class="tab-page" id="page-alarm">
-    <div class="card">
+    <div class="card glass stagger">
       <div class="card-title" style="display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;align-items:center;">
         <span>&#128203; 闹钟列表</span>
         <button class="btn btn-primary btn-sm" onclick="openAddAlarmModal()">+ 添加</button>
       </div>
       <div id="alarmList"></div>
     </div>
-    <div class="card">
+    <div class="card glass stagger">
       <div class="card-title">&#9888; 闹钟操作</div>
       <div class="link-row">
         <a class="link-btn" href="javascript:doAction('/testAlarm')">模拟闹钟</a>
@@ -246,7 +336,7 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
 
   <!-- 设置页 -->
   <div class="tab-page" id="page-setting">
-    <div class="card">
+    <div class="card glass stagger">
       <div class="card-title">&#9881; 基础设置</div>
       <div class="form-row">
         <div class="form-group" style="margin-bottom:0;"><label class="form-label">默认音量</label><input type="text" class="form-input" id="volDefault" placeholder="0-100"></div>
@@ -256,33 +346,33 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
         <div class="form-group" style="margin-bottom:0;"><label class="form-label">闹钟时长(分)</label><input type="text" class="form-input" id="alarmTime" placeholder="4.5"></div>
         <div class="form-group" style="margin-bottom:0;"><label class="form-label">时区 UTC+</label><input type="text" class="form-input" id="tz" placeholder="8"></div>
       </div>
-      <div class="form-group"><label class="form-label">天气城市代码</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="weatherCityCode" placeholder="不填不播报"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:60px;" onclick="getCityCode()">查询</button></div></div>
+      <div class="form-group"><label class="form-label">天气城市代码</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="weatherCityCode" placeholder="不填不播报"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:56px;" onclick="getCityCode()">查询</button></div></div>
       <div class="form-group"><label class="form-label">天气更新时间</label><input type="text" class="form-input" id="weatherUpdate" placeholder="HHmm"></div>
       <div class="form-group"><label class="form-label">音质选择</label><select class="form-input" id="musicQuality"><option value="standard">标准</option><option value="higher">较高</option><option value="exhigh">极高</option><option value="lossless">无损</option></select></div>
-      <div class="form-group"><label class="form-label">缓存目录</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="savePath" placeholder="默认留空不缓存"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:60px;" onclick="doAction('/delSave')">清空</button></div><div class="hint">绝对路径或 ./music</div></div>
+      <div class="form-group"><label class="form-label">缓存目录</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="savePath" placeholder="默认留空不缓存"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:56px;" onclick="doAction('/delSave')">清空</button></div><div class="hint">绝对路径或 ./music</div></div>
       <label class="checkbox-inline"><input type="checkbox" id="wakelock" value="1"> CPU唤醒锁（重启生效）</label>
       <label class="checkbox-inline"><input type="checkbox" id="muteWhenStop" value="1"> 停止时静音</label>
       <label class="checkbox-inline"><input type="checkbox" id="broadcastMode" value="1"> 全屋同步播放主机</label>
-      <div class="form-group" style="margin-top:10px;"><label class="form-label">同步偏移(毫秒)</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="defSeek" placeholder="越大越早播放"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:60px;" onclick="doAction('/echo?msg=SEEK')">对齐</button></div></div>
+      <div class="form-group" style="margin-top:10px;"><label class="form-label">同步偏移(毫秒)</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="defSeek" placeholder="越大越早播放"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:56px;" onclick="doAction('/echo?msg=SEEK')">对齐</button></div></div>
       <div class="form-group"><label class="form-label">下一次小周日期</label><input type="text" class="form-input" id="smallWeekDate" placeholder="yyyymmdd"></div>
     </div>
 
-    <div class="card">
+    <div class="card glass stagger">
       <div class="card-title">&#9835; 音乐设置</div>
       <div class="form-group"><label class="form-label">闹钟歌单 ID</label><input type="text" class="form-input" id="nePlayListId" placeholder="网易云歌单ID"></div>
       <div class="form-group"><label class="form-label">默认歌单 ID</label><input type="text" class="form-input" id="defPlayListId" placeholder="网易云歌单ID"></div>
-      <div class="form-label" style="margin-top:10px;">音乐文件</div>
+      <div class="form-label" style="margin-top:10px;">音乐工具</div>
       <div class="link-row">
         <a class="link-btn" href="javascript:doAction('/getWeather')">获取天气</a>
         <a class="link-btn" href="javascript:doAction('/downWeather')">下载天气音频</a>
         <a class="link-btn" href="javascript:doAction('/play?url=http://127.0.0.1:8080/weather.mp3')">播放天气</a>
         <a class="link-btn" href="/music.mp3" target="_blank">下载默认音乐</a>
       </div>
-      <div class="hint" style="margin-top:8px;">上传MP3/配置请使用原管理页：<a href="/alarm.html" style="color:#7c8cff;">alarm.html</a></div>
+      <div class="hint" style="margin-top:8px;">上传MP3/配置请使用原管理页：<a href="/alarm.html" style="color:var(--accent);text-decoration:none;">alarm.html</a></div>
     </div>
 
     <!-- 智能闹钟 -->
-    <div class="card">
+    <div class="card glass stagger">
       <div class="switch-row" onclick="toggleSmart(event)">
         <div><div class="switch-label">智能闹钟</div><div class="switch-desc">联动米家设备，工作时间自动检测</div></div>
         <div class="switch" id="smartSwitch"></div>
@@ -309,12 +399,12 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
         <div id="intervalList"></div>
         <button class="btn btn-ghost btn-sm" onclick="addInterval()" style="margin-bottom:14px;">+ 添加区间</button>
 
-        <div class="switch-row" style="padding:8px 0;" onclick="toggleWorkOnly(event)">
+        <div class="switch-row" style="padding:4px 0;" onclick="toggleWorkOnly(event)">
           <div class="switch-label" style="font-size:13px;">仅工作日检测</div>
-          <div class="switch" id="woSwitch" style="width:38px;height:22px;"></div>
+          <div class="switch" id="woSwitch" style="width:42px;height:24px;"></div>
         </div>
 
-        <div class="form-group" style="margin-top:10px;"><label class="form-label">Bark 推送链接</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="barkUrl" placeholder="https://api.day.app/你的key"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:50px;" onclick="testBark()">测试</button></div></div>
+        <div class="form-group" style="margin-top:12px;"><label class="form-label">Bark 推送链接</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="barkUrl" placeholder="https://api.day.app/你的key"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:50px;" onclick="testBark()">测试</button></div></div>
         <div class="form-row"><div class="form-group" style="margin-bottom:0;"><label class="form-label">推送间隔(秒)</label><input type="text" class="form-input" id="barkInterval" value="300"></div><div class="form-group" style="margin-bottom:0;"><label class="form-label">检查间隔(秒)</label><input type="text" class="form-input" id="checkInterval" value="30"></div></div>
         <div class="form-label" style="margin-top:10px;">音量渐强</div>
         <div class="form-row"><div class="form-group" style="margin-bottom:0;"><label class="form-label">起始</label><input type="text" class="form-input" id="volRampStart" value="50"></div><div class="form-group" style="margin-bottom:0;"><label class="form-label">每次+</label><input type="text" class="form-input" id="volRampStep" value="10"></div></div>
@@ -433,7 +523,6 @@ function doAction(url){ajax(url,function(){});}
 function openCamera(){location.href='//'+location.hostname+':8880';}
 function timeStop(){var m=$('timeStopMin').value||'30';ajax('/timeStop?min='+m,function(){showToast('已设定'+m+'分钟后停止');});}
 
-// 下次闹钟
 function fetchNextAlarm(){
   ajax('/nextAlarm',function(st,text){
     if(st!==200)return;
@@ -450,7 +539,6 @@ function fetchNextAlarm(){
   });
 }
 
-// 智能闹钟状态
 function fetchSmartStatus(){
   ajax('/oversleep/status',function(st,text){
     if(st!==200)return;
@@ -467,7 +555,6 @@ function fetchSmartStatus(){
   });
 }
 
-// 播放状态
 function fetchStatus(){
   ajax('/status',function(st,text){
     if(st!==200)return;
@@ -495,7 +582,6 @@ function fetchStatus(){
 $('volSlider').addEventListener('input',function(){$('volNum').textContent=this.value;ajax('/vol?vol='+this.value,function(){});});
 function stopAlarm(){ajax('/stop',function(){fetchStatus();});}
 
-// 闹钟列表 - 用d.alarms
 function loadAlarms(){
   ajax('/status',function(st,text){
     if(st!==200)return;
@@ -511,7 +597,8 @@ function loadAlarms(){
           for(var j=0;j<types.length;j++){labels.push(typeNames[types[j]]||types[j]);}
           var daysStr=labels.length>0?labels.join('、'):'每天';
           var item=document.createElement('div');item.className='alarm-item';
-          item.innerHTML='<div><div class="alarm-time">'+time+'</div><div class="alarm-days">'+daysStr+'</div></div><button class="btn btn-danger btn-sm" onclick="delAlarm(\''+time+'\')">删除</button>';
+          item.style.animationDelay=(i*0.05)+'s';
+          item.innerHTML='<div><div class="time">'+time+'</div><div class="days">'+daysStr+'</div></div><button class="btn btn-danger btn-sm" onclick="delAlarm(\''+time+'\')">删除</button>';
           list.appendChild(item);
         }
       }else{list.innerHTML='<div class="alarm-empty">暂无闹钟，点击右上角添加</div>';}
@@ -520,7 +607,6 @@ function loadAlarms(){
 }
 function delAlarm(t){ajax('/delAlarm?hhmm='+encodeURIComponent(t),function(){setTimeout(loadAlarms,400);fetchNextAlarm();showToast('已删除');});}
 
-// 添加闹钟模态框
 function openAddAlarmModal(){
   tpHour=7;tpMin=30;selectedTypes=['4'];selectedDays=[];
   updateTPDisplay();updatePillDisplay();
@@ -569,18 +655,16 @@ function confirmAddAlarm(){
   });
 }
 
-// 智能闹钟开关
 function toggleSmart(e){
   e.stopPropagation();
   var sw=$('smartSwitch');var isOn=sw.className.indexOf('on')>=0;
   if(!isOn){
     showModal('智能闹钟',
-      '<p>启用后可以：</p><p>1. 登录米家账号选择智能设备（如空调）</p><p>2. 在设定的工作时间内自动检测设备开关状态</p><p>3. 设备仍开启时自动响铃提醒，并通过 Bark 推送通知</p><p>4. 响铃音量逐渐增大，设备关闭后立即停止</p><p style="margin-top:8px;font-size:12px;color:rgba(228,230,235,0.4);">需要米家账号登录并选择设备</p>',
+      '<p>启用后可以：</p><p>1. 登录米家账号选择智能设备（如空调）</p><p>2. 在设定的工作时间内自动检测设备开关状态</p><p>3. 设备仍开启时自动响铃提醒，并通过 Bark 推送通知</p><p>4. 响铃音量逐渐增大，设备关闭后立即停止</p><p style="margin-top:8px;font-size:12px;color:var(--text3);">需要米家账号登录并选择设备</p>',
       function(){sw.className='switch on';$('smartSection').className='hidden-section show';checkMiStatus();loadMiHomes();});
   }else{sw.className='switch';$('smartSection').className='hidden-section';$('qrBox').className='qr-box hidden-section';}
 }
 
-// 米家
 function miLogin(){var u=$('miUser').value.trim(),p=$('miPass').value;if(!u||!p){showToast('请输入账号密码');return;}ajax('/mi/login?user='+encodeURIComponent(u)+'&pass='+encodeURIComponent(p),function(st){if(st===200){showToast('登录成功');checkMiStatus();loadMiHomes();}else showToast('登录失败');});}
 function miLogout(){ajax('/mi/logout',function(){showToast('已注销');checkMiStatus();$('miHomeSelect').innerHTML='<option value="">请先登录</option>';$('miDeviceSelect').innerHTML='<option value="">请选择家庭</option>';});}
 function updateMiLoginUI(loggedIn,userId){
@@ -645,7 +729,6 @@ function getIntervals(){var items=$('intervalList').querySelectorAll('.interval-
 function testBark(){var url=$('barkUrl').value.trim();if(!url){showToast('请填写Bark链接');return;}ajax('/updateCfg?barkUrl='+encodeURIComponent(url),function(){ajax('/oversleep/testBark',function(){showToast('已发送测试');});});}
 function getCityCode(){var city=prompt('输入市/区名称（如：北京、朝阳）');if(city){ajax('/getWeatherCityCode?city='+encodeURIComponent(city),function(st,text){if(st===200){try{var d=JSON.parse(text);var code=d.code||d.cityCode||d.adcode||'';if(code){$('weatherCityCode').value=code;showToast('已填入');}else showToast('未找到');}catch(e){showToast('查询失败');}}});}}
 
-// 加载配置
 var configLoaded=false;
 function loadConfig(){
   if(configLoaded)return;
@@ -663,16 +746,8 @@ function loadConfig(){
       for(var i=0;i<ivs.length;i++)addInterval(ivs[i].start,ivs[i].end);
     }catch(e){}
   });
-  // 加载基础配置
-  ajax('/status',function(st,text){
-    if(st!==200)return;
-    try{
-      // 基础配置需要从配置文件加载，这里先留空让用户填写
-    }catch(e){}
-  });
 }
 
-// 保存
 function saveAll(){
   var p=[];function add(k,v){if(v!==''&&v!=null)p.push(k+'='+encodeURIComponent(v));}
   add('volDefault',$('volDefault').value);add('volAlarm',$('volAlarm').value);add('alarmTime',$('alarmTime').value);add('tz',$('tz').value);
@@ -689,7 +764,6 @@ function saveAll(){
   ajax('/updateCfg?'+p.join('&'),function(st){if(st===200){showToast('保存成功');setTimeout(function(){switchTab('clock');fetchNextAlarm();fetchSmartStatus();},600);}else showToast('保存失败');});
 }
 
-// 初始化
 fetchStatus();fetchNextAlarm();fetchSmartStatus();
 setInterval(fetchStatus,5000);setInterval(fetchNextAlarm,30000);setInterval(fetchSmartStatus,5000);
 if(location.hash==='#setting'||location.pathname.indexOf('alarm')>=0){switchTab('setting');}
