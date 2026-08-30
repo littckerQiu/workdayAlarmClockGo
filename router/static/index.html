@@ -28,20 +28,10 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;}
 html,body{height:100%;width:100%;overflow:hidden;}
-body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);position:fixed;top:0;left:0;right:0;bottom:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#0d0d12;color:var(--text);position:fixed;top:0;left:0;right:0;bottom:0;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;}
 
-/* 渐变光球背景 */
-.bg-orbs{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;pointer-events:none;}
-.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.35;}
-.orb1{width:300px;height:300px;background:#f59e0b;top:-80px;right:-60px;-webkit-animation:float1 18s ease-in-out infinite;animation:float1 18s ease-in-out infinite;}
-.orb2{width:260px;height:260px;background:#8b5cf6;bottom:-60px;left:-50px;-webkit-animation:float2 22s ease-in-out infinite;animation:float2 22s ease-in-out infinite;}
-.orb3{width:200px;height:200px;background:#ef4444;top:40%;left:50%;-webkit-animation:float3 25s ease-in-out infinite;animation:float3 25s ease-in-out infinite;opacity:0.2;}
-@-webkit-keyframes float1{0%,100%{-webkit-transform:translate(0,0);}50%{-webkit-transform:translate(-40px,60px);}}
-@keyframes float1{0%,100%{transform:translate(0,0);}50%{transform:translate(-40px,60px);}}
-@-webkit-keyframes float2{0%,100%{-webkit-transform:translate(0,0);}50%{-webkit-transform:translate(50px,-40px);}}
-@keyframes float2{0%,100%{transform:translate(0,0);}50%{transform:translate(50px,-40px);}}
-@-webkit-keyframes float3{0%,100%{-webkit-transform:translate(-50%,-50%) scale(1);}50%{-webkit-transform:translate(-30%,-70%) scale(1.2);}}
-@keyframes float3{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-30%,-70%) scale(1.2);}}
+/* 背景：纯净深色，微妙径向渐变增加层次 */
+.bg-layer{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,rgba(245,158,11,0.06) 0%,transparent 60%),radial-gradient(ellipse at 50% 100%,rgba(139,92,246,0.04) 0%,transparent 50%);}
 
 /* 玻璃卡片 */
 .glass{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,0.3),inset 0 1px 0 var(--glass-highlight);}
@@ -53,7 +43,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","P
 .topbar .sub{font-size:11px;color:var(--text3);margin-top:1px;}
 
 /* 内容区 */
-.content{position:relative;z-index:1;-webkit-box-flex:1;-webkit-flex:1;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:calc(90px + env(safe-area-inset-bottom));}
+.content{position:relative;z-index:1;-webkit-box-flex:1;-webkit-flex:1;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:calc(90px + env(safe-area-inset-bottom));}
 .tab-page{display:none;}
 .tab-page.active{display:block;}
 .tab-page.active .stagger{-webkit-animation:staggerIn 0.5s var(--ease) both;animation:staggerIn 0.5s var(--ease) both;}
@@ -238,7 +228,7 @@ select.form-input option{background:#1a1a24;color:var(--text);}
 </head>
 <body>
 
-<div class="bg-orbs"><div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div></div>
+<div class="bg-layer"></div>
 
 <div class="topbar">
   <div><h1 id="topTitle">闹钟</h1><div class="sub" id="topSub"></div></div>
@@ -433,6 +423,7 @@ select.form-input option{background:#1a1a24;color:var(--text);}
         <div class="tp-label">时</div>
         <div class="tp-display" id="tpHour">07</div>
         <div class="tp-btns"><button class="tp-btn" onclick="adjHour(-1)">&#8722;</button><button class="tp-btn" onclick="adjHour(1)">+</button></div>
+        <div class="tp-btns"><button class="tp-btn fine" style="width:76px;" onclick="setNowTime()">现在</button></div>
       </div>
       <div class="tp-sep">:</div>
       <div class="tp-col">
@@ -576,6 +567,7 @@ function fetchStatus(){
         else msg+='待机中';
       }
       $('nowPlaying').innerHTML=msg;
+      if(d.vol!=null){$('volSlider').value=d.vol;$('volNum').textContent=d.vol;}
     }catch(e){}
   });
 }
@@ -615,6 +607,7 @@ function openAddAlarmModal(){
 function closeAddAlarmModal(e){if(e&&e.target!==$('addAlarmModal'))return;$('addAlarmModal').className='modal-overlay';}
 function updateTPDisplay(){$('tpHour').textContent=pad(tpHour);$('tpMin').textContent=pad(tpMin);}
 function adjHour(d){tpHour=(tpHour+d+24)%24;updateTPDisplay();}
+function setNowTime(){var n=new Date();tpHour=n.getHours();tpMin=n.getMinutes();updateTPDisplay();}
 function adjMin(d){tpMin=(tpMin+d+60)%60;updateTPDisplay();}
 function toggleType(el){
   var t=el.getAttribute('data-type');
