@@ -125,6 +125,11 @@ func GetUser() *User {
 	return currentUser
 }
 
+// Logout 注销米家登录
+func Logout() {
+	currentUser = nil
+}
+
 // Login 用账号密码登录米家
 func Login(username, password string) (*User, error) {
 	// 1. 获取登录位置信息

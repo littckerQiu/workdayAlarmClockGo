@@ -8,13 +8,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;width:100%;}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
-  background:#0f1117;color:#e4e6eb;overflow-x:hidden;
-  display:-webkit-box;display:-webkit-flex;display:flex;
-  -webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;
-  position:fixed;top:0;left:0;right:0;bottom:0;
-}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#0f1117;color:#e4e6eb;overflow-x:hidden;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;position:fixed;top:0;left:0;right:0;bottom:0;}
 .topbar{flex-shrink:0;padding:14px 20px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06);background:rgba(15,17,23,0.95);z-index:10;}
 .topbar h1{font-size:17px;font-weight:600;letter-spacing:0.5px;}
 .topbar .sub{font-size:12px;color:rgba(228,230,235,0.45);margin-top:2px;}
@@ -29,35 +23,35 @@ body{
 .tab-btn.active{color:#7c8cff;}
 .card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px;margin-bottom:14px;}
 .card-title{font-size:13px;font-weight:600;color:rgba(228,230,235,0.6);letter-spacing:0.5px;margin-bottom:14px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:6px;}
-/* 时钟页 */
-.clock-wrap{text-align:center;padding:16px 0 8px;}
-.clock-time{font-size:60px;font-weight:200;letter-spacing:2px;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,#fff,#a5b4fc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;}
+/* 时钟 */
+.clock-wrap{text-align:center;padding:10px 0 6px;}
+.clock-time{font-size:56px;font-weight:200;letter-spacing:2px;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,#fff,#a5b4fc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;}
 .clock-time .colon{opacity:0.6;}
-.clock-date{font-size:14px;color:rgba(228,230,235,0.45);margin-top:6px;letter-spacing:1px;}
+.clock-date{font-size:13px;color:rgba(228,230,235,0.45);margin-top:4px;letter-spacing:1px;}
 .next-alarm{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;}
-.next-alarm .time{font-size:28px;font-weight:300;font-variant-numeric:tabular-nums;}
-.next-alarm .countdown{font-size:13px;color:rgba(228,230,235,0.5);margin-top:2px;}
-.next-alarm .icon{font-size:28px;}
-.smart-status{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:10px;}
-.smart-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.smart-dot.on{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.5);}
-.smart-dot.off{background:rgba(255,255,255,0.2);}
-.smart-dot.warn{background:#f87171;box-shadow:0 0 8px rgba(248,113,113,0.5);-webkit-animation:pulse 1.5s infinite;animation:pulse 1.5s infinite;}
-@-webkit-keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
-.smart-text{font-size:14px;font-weight:500;}
-.smart-sub{font-size:12px;color:rgba(228,230,235,0.4);margin-top:2px;}
+.next-alarm .time{font-size:26px;font-weight:300;font-variant-numeric:tabular-nums;}
+.next-alarm .countdown{font-size:12px;color:rgba(228,230,235,0.5);margin-top:2px;}
+.next-alarm .icon{font-size:26px;}
+/* 播放控制 */
+.ctrl-row{display:-webkit-box;display:-webkit-flex;display:flex;gap:8px;margin-bottom:10px;}
+.ctrl-btn{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;padding:10px 4px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:#e4e6eb;font-size:12px;cursor:pointer;-webkit-transition:all 0.15s;transition:all 0.15s;font-family:inherit;}
+.ctrl-btn:active{-webkit-transform:scale(0.95);transform:scale(0.95);background:rgba(124,140,255,0.2);}
+.ctrl-btn.danger{background:rgba(239,68,68,0.15);color:#fca5a5;}
+.now-playing{font-size:13px;color:rgba(228,230,235,0.7);margin-bottom:8px;line-height:1.5;}
+.now-playing a{color:#7c8cff;text-decoration:none;}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;}
+.badge-ok{background:rgba(74,222,128,0.12);color:#86efac;}
+.badge-warn{background:rgba(250,204,21,0.12);color:#fde047;}
+.badge-err{background:rgba(248,113,113,0.12);color:#fca5a5;}
+/* 音量 */
 .vol-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:12px;}
 .vol-slider{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);outline:none;}
 .vol-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#7c8cff;cursor:pointer;box-shadow:0 2px 6px rgba(124,140,255,0.4);}
 .vol-num{font-size:14px;color:rgba(228,230,235,0.6);min-width:32px;text-align:right;font-variant-numeric:tabular-nums;}
-.btn{display:inline-block;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;-webkit-transition:all 0.2s;transition:all 0.2s;text-align:center;}
-.btn:active{-webkit-transform:scale(0.97);transform:scale(0.97);}
-.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;}
-.btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;}
-.btn-ghost{background:rgba(255,255,255,0.06);color:#e4e6eb;border:1px solid rgba(255,255,255,0.1);}
-.btn-sm{padding:8px 14px;font-size:12px;border-radius:8px;}
-.btn-block{display:block;width:100%;}
+/* 快捷链接 */
+.link-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:8px;}
+.link-btn{padding:8px 12px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#e4e6eb;font-size:12px;cursor:pointer;text-decoration:none;-webkit-transition:all 0.15s;transition:all 0.15s;}
+.link-btn:active{background:rgba(124,140,255,0.2);}
 /* 表单 */
 .form-group{margin-bottom:14px;}
 .form-group:last-child{margin-bottom:0;}
@@ -70,6 +64,7 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
 .form-row{display:-webkit-box;display:-webkit-flex;display:flex;gap:8px;margin-bottom:14px;}
 .form-row > *{min-width:0;-webkit-box-flex:1;-webkit-flex:1;flex:1;}
 .form-row .form-input{width:100%;}
+.checkbox-inline{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:6px;font-size:13px;color:rgba(228,230,235,0.7);cursor:pointer;padding:6px 0;}
 /* 开关 */
 .switch-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;padding:12px 0;}
 .switch-label{font-size:14px;font-weight:500;}
@@ -82,19 +77,29 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
 .hidden-section.show{display:block;-webkit-animation:slideDown 0.3s ease;animation:slideDown 0.3s ease;}
 @-webkit-keyframes slideDown{from{opacity:0;-webkit-transform:translateY(-8px);}to{opacity:1;-webkit-transform:translateY(0);}}
 @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+/* 按钮 */
+.btn{display:inline-block;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;-webkit-transition:all 0.2s;transition:all 0.2s;text-align:center;}
+.btn:active{-webkit-transform:scale(0.97);transform:scale(0.97);}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;}
+.btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;}
+.btn-ghost{background:rgba(255,255,255,0.06);color:#e4e6eb;border:1px solid rgba(255,255,255,0.1);}
+.btn-sm{padding:8px 14px;font-size:12px;border-radius:8px;}
+.btn-block{display:block;width:100%;}
 /* 闹钟列表 */
 .alarm-item{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;padding:14px 16px;background:rgba(255,255,255,0.03);border-radius:12px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.05);}
 .alarm-item .time{font-size:22px;font-weight:300;font-variant-numeric:tabular-nums;}
 .alarm-item .days{font-size:11px;color:rgba(228,230,235,0.4);margin-top:2px;}
-.alarm-empty{text-align:center;padding:30px 0;color:rgba(228,230,235,0.35);font-size:13px;}
-/* 美化的日期选择器 */
-.day-pills{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:6px;}
-.day-pill{padding:8px 0;min-width:38px;text-align:center;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:13px;cursor:pointer;-webkit-transition:all 0.2s;transition:all 0.2s;user-select:none;}
-.day-pill:active{-webkit-transform:scale(0.95);transform:scale(0.95);}
-.day-pill.selected{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(99,102,241,0.3);}
-.type-pills{display:-webkit-box;display:-webkit-flex;display:flex;gap:6px;margin-bottom:14px;}
-.type-pill{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;padding:10px 4px;text-align:center;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:12px;cursor:pointer;-webkit-transition:all 0.2s;transition:all 0.2s;user-select:none;}
-.type-pill.selected{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:transparent;color:#fff;}
+.alarm-empty{text-align:center;padding:24px 0;color:rgba(228,230,235,0.35);font-size:13px;}
+/* 智能状态 */
+.smart-status{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:10px;}
+.smart-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.smart-dot.on{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.5);}
+.smart-dot.off{background:rgba(255,255,255,0.2);}
+.smart-dot.warn{background:#f87171;box-shadow:0 0 8px rgba(248,113,113,0.5);-webkit-animation:pulse 1.5s infinite;animation:pulse 1.5s infinite;}
+@-webkit-keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.smart-text{font-size:14px;font-weight:500;}
+.smart-sub{font-size:12px;color:rgba(228,230,235,0.4);margin-top:2px;}
 /* 区间 */
 .interval-item{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:8px;margin-bottom:8px;}
 .interval-item .form-input{max-width:90px;text-align:center;}
@@ -104,11 +109,6 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
 .qr-box{text-align:center;padding:16px;}
 .qr-box #qrCodeImg{display:inline-block;padding:10px;background:#fff;border-radius:12px;}
 .qr-tip{font-size:12px;color:rgba(228,230,235,0.5);margin-top:12px;}
-/* 徽章 */
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;}
-.badge-ok{background:rgba(74,222,128,0.12);color:#86efac;}
-.badge-warn{background:rgba(250,204,21,0.12);color:#fde047;}
-.badge-err{background:rgba(248,113,113,0.12);color:#fca5a5;}
 /* 模态框 */
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:none;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;z-index:1000;padding:20px;}
 .modal-overlay.show{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-animation:fadeIn 0.2s ease;animation:fadeIn 0.2s ease;}
@@ -120,17 +120,30 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
 .modal .modal-actions{display:-webkit-box;display:-webkit-flex;display:flex;gap:10px;margin-top:20px;}
 .modal .modal-actions .btn{-webkit-box-flex:1;-webkit-flex:1;flex:1;}
 /* 时间选择器 */
-.time-picker{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;gap:16px;margin:16px 0;}
+.time-picker{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;gap:12px;margin:16px 0;}
 .tp-col{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:6px;}
 .tp-label{font-size:11px;color:rgba(228,230,235,0.4);}
-.tp-display{font-size:42px;font-weight:200;font-variant-numeric:tabular-nums;min-width:70px;text-align:center;background:rgba(255,255,255,0.05);border-radius:12px;padding:8px 0;}
-.tp-sep{font-size:32px;color:rgba(228,230,235,0.3);padding-bottom:20px;}
-.tp-btns{display:-webkit-box;display:-webkit-flex;display:flex;gap:8px;}
-.tp-btn{width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:#e4e6eb;font-size:18px;cursor:pointer;-webkit-transition:all 0.15s;transition:all 0.15s;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;}
+.tp-display{font-size:38px;font-weight:200;font-variant-numeric:tabular-nums;min-width:64px;text-align:center;background:rgba(255,255,255,0.05);border-radius:12px;padding:6px 0;}
+.tp-sep{font-size:28px;color:rgba(228,230,235,0.3);padding-bottom:18px;}
+.tp-btns{display:-webkit-box;display:-webkit-flex;display:flex;gap:6px;}
+.tp-btn{width:34px;height:30px;border-radius:8px;border:none;background:rgba(255,255,255,0.08);color:#e4e6eb;font-size:16px;cursor:pointer;-webkit-transition:all 0.15s;transition:all 0.15s;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;font-family:inherit;}
 .tp-btn:active{-webkit-transform:scale(0.9);transform:scale(0.9);background:rgba(124,140,255,0.3);}
+.tp-btn.fine{width:28px;height:26px;font-size:12px;background:rgba(255,255,255,0.05);}
+/* 胶囊选择 */
+.type-pills{display:-webkit-box;display:-webkit-flex;display:flex;gap:6px;margin-bottom:12px;}
+.type-pill{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;padding:10px 4px;text-align:center;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:12px;cursor:pointer;-webkit-transition:all 0.2s;transition:all 0.2s;user-select:none;}
+.type-pill.selected{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:transparent;color:#fff;}
+.day-pills{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:6px;}
+.day-pill{padding:8px 0;min-width:36px;text-align:center;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:13px;cursor:pointer;-webkit-transition:all 0.2s;transition:all 0.2s;user-select:none;}
+.day-pill.selected{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:transparent;color:#fff;}
+/* 设备状态行 */
+.device-status-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;gap:8px;margin-top:8px;}
+.refresh-btn{width:28px;height:28px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:#e4e6eb;cursor:pointer;font-size:14px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;flex-shrink:0;}
+.refresh-btn:active{-webkit-transform:rotate(180deg);transform:rotate(180deg);-webkit-transition:transform 0.3s;transition:transform 0.3s;}
 .toast{position:fixed;top:50%;left:50%;-webkit-transform:translate(-50%,-50%);transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;z-index:2000;display:none;}
 .toast.show{display:block;-webkit-animation:fadeIn 0.2s ease;animation:fadeIn 0.2s ease;}
-@media(max-width:360px){.clock-time{font-size:50px;}.content{padding:12px;}.card{padding:14px;}}
+.hint{font-size:11px;color:rgba(228,230,235,0.35);margin-top:4px;line-height:1.5;}
+@media(max-width:360px){.clock-time{font-size:48px;}.content{padding:12px;}.card{padding:14px;}}
 </style>
 </head>
 <body>
@@ -148,14 +161,16 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
       <div class="clock-time"><span id="tH">00</span><span class="colon">:</span><span id="tM">00</span><span class="colon">:</span><span id="tS">00</span></div>
       <div class="clock-date" id="tDate">--</div>
     </div>
+
     <div class="card">
       <div class="card-title">&#9201; 下次闹钟</div>
       <div class="next-alarm" id="nextAlarmBox" style="display:none;">
         <div><div class="time" id="nextAlarmTime">--:--</div><div class="countdown" id="nextAlarmCountdown">--</div></div>
         <div class="icon">&#9200;</div>
       </div>
-      <div id="noAlarm" style="text-align:center;color:rgba(228,230,235,0.35);padding:10px 0;font-size:13px;">暂无闹钟</div>
+      <div id="noAlarm" style="text-align:center;color:rgba(228,230,235,0.35);padding:8px 0;font-size:13px;">暂无闹钟</div>
     </div>
+
     <div class="card" id="smartCard" style="display:none;">
       <div class="card-title">&#129302; 智能闹钟</div>
       <div class="smart-status">
@@ -163,11 +178,51 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
         <div><div class="smart-text" id="smartText">--</div><div class="smart-sub" id="smartSub">--</div></div>
       </div>
     </div>
+
+    <div class="card">
+      <div class="card-title">&#127911; 播放控制</div>
+      <div class="now-playing" id="nowPlaying">待机中</div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn danger" onclick="doAction('/stop')">&#9632; 停止</button>
+        <button class="ctrl-btn" onclick="doAction('/pause')">&#10074;&#10074; 暂停</button>
+        <button class="ctrl-btn" onclick="doAction('/resume')">&#9654; 恢复</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn" onclick="doAction('/prev')">&#9198; 上一首</button>
+        <button class="ctrl-btn" onclick="doAction('/next')">&#9197; 下一首</button>
+        <button class="ctrl-btn" onclick="doAction('/volm')">&#128263; 音量-</button>
+        <button class="ctrl-btn" onclick="doAction('/volp')">&#128262; 音量+</button>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">&#128266; 音量</div>
       <div class="vol-row"><input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="50"><span class="vol-num" id="volNum">50</span></div>
     </div>
-    <div class="card" id="stopCard" style="display:none;"><button class="btn btn-danger btn-block" onclick="stopAlarm()">&#9632; 停止闹钟</button></div>
+
+    <div class="card">
+      <div class="card-title">&#9202; 定时停止</div>
+      <div class="form-row" style="margin-bottom:0;">
+        <input type="text" class="form-input" id="timeStopMin" value="30" style="max-width:80px;">
+        <span style="font-size:13px;color:rgba(228,230,235,0.5);display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;">分钟后停止</span>
+        <button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:70px;" onclick="timeStop()">设定</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128279; 快捷操作</div>
+      <div class="link-row">
+        <a class="link-btn" href="javascript:openCamera()">&#128247; 摄像头</a>
+        <a class="link-btn" href="javascript:doAction('/restart')">&#128260; 重启</a>
+        <a class="link-btn" href="javascript:doAction('/echo?msg=SCREENON')">&#128241; 亮屏</a>
+        <a class="link-btn" href="javascript:doAction('/echo?msg=SCREENOFF')">&#127770; 熄屏</a>
+        <a class="link-btn" href="javascript:doAction('/testAlarm')">&#9200; 模拟闹钟</a>
+      </div>
+    </div>
+
+    <div class="card" id="stopCard" style="display:none;">
+      <button class="btn btn-danger btn-block" onclick="stopAlarm()">&#9632; 停止闹钟</button>
+    </div>
   </div>
 
   <!-- 闹钟页 -->
@@ -179,29 +234,54 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
       </div>
       <div id="alarmList"></div>
     </div>
+    <div class="card">
+      <div class="card-title">&#9888; 闹钟操作</div>
+      <div class="link-row">
+        <a class="link-btn" href="javascript:doAction('/testAlarm')">模拟闹钟</a>
+        <a class="link-btn" href="javascript:doAction('/skipAlarm?n=1')">跳过1次</a>
+        <a class="link-btn" href="javascript:doAction('/skipAlarm?n=0')">取消跳过</a>
+      </div>
+    </div>
   </div>
 
   <!-- 设置页 -->
   <div class="tab-page" id="page-setting">
     <div class="card">
       <div class="card-title">&#9881; 基础设置</div>
-      <div class="form-group"><label class="form-label">默认音量</label><input type="text" class="form-input" id="volDefault" placeholder="0-100"></div>
-      <div class="form-group"><label class="form-label">闹钟音量</label><input type="text" class="form-input" id="volAlarm" placeholder="0-100"></div>
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0;"><label class="form-label">默认音量</label><input type="text" class="form-input" id="volDefault" placeholder="0-100"></div>
+        <div class="form-group" style="margin-bottom:0;"><label class="form-label">闹钟音量</label><input type="text" class="form-input" id="volAlarm" placeholder="0-100"></div>
+      </div>
       <div class="form-row">
         <div class="form-group" style="margin-bottom:0;"><label class="form-label">闹钟时长(分)</label><input type="text" class="form-input" id="alarmTime" placeholder="4.5"></div>
         <div class="form-group" style="margin-bottom:0;"><label class="form-label">时区 UTC+</label><input type="text" class="form-input" id="tz" placeholder="8"></div>
       </div>
       <div class="form-group"><label class="form-label">天气城市代码</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="weatherCityCode" placeholder="不填不播报"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:60px;" onclick="getCityCode()">查询</button></div></div>
       <div class="form-group"><label class="form-label">天气更新时间</label><input type="text" class="form-input" id="weatherUpdate" placeholder="HHmm"></div>
+      <div class="form-group"><label class="form-label">音质选择</label><select class="form-input" id="musicQuality"><option value="standard">标准</option><option value="higher">较高</option><option value="exhigh">极高</option><option value="lossless">无损</option></select></div>
+      <div class="form-group"><label class="form-label">缓存目录</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="savePath" placeholder="默认留空不缓存"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:60px;" onclick="doAction('/delSave')">清空</button></div><div class="hint">绝对路径或 ./music</div></div>
+      <label class="checkbox-inline"><input type="checkbox" id="wakelock" value="1"> CPU唤醒锁（重启生效）</label>
+      <label class="checkbox-inline"><input type="checkbox" id="muteWhenStop" value="1"> 停止时静音</label>
+      <label class="checkbox-inline"><input type="checkbox" id="broadcastMode" value="1"> 全屋同步播放主机</label>
+      <div class="form-group" style="margin-top:10px;"><label class="form-label">同步偏移(毫秒)</label><div class="form-row" style="margin-bottom:0;"><input type="text" class="form-input" id="defSeek" placeholder="越大越早播放"><button class="btn btn-ghost btn-sm" style="flex-shrink:0;min-width:60px;" onclick="doAction('/echo?msg=SEEK')">对齐</button></div></div>
+      <div class="form-group"><label class="form-label">下一次小周日期</label><input type="text" class="form-input" id="smallWeekDate" placeholder="yyyymmdd"></div>
     </div>
 
     <div class="card">
       <div class="card-title">&#9835; 音乐设置</div>
       <div class="form-group"><label class="form-label">闹钟歌单 ID</label><input type="text" class="form-input" id="nePlayListId" placeholder="网易云歌单ID"></div>
       <div class="form-group"><label class="form-label">默认歌单 ID</label><input type="text" class="form-input" id="defPlayListId" placeholder="网易云歌单ID"></div>
+      <div class="form-label" style="margin-top:10px;">音乐文件</div>
+      <div class="link-row">
+        <a class="link-btn" href="javascript:doAction('/getWeather')">获取天气</a>
+        <a class="link-btn" href="javascript:doAction('/downWeather')">下载天气音频</a>
+        <a class="link-btn" href="javascript:doAction('/play?url=http://127.0.0.1:8080/weather.mp3')">播放天气</a>
+        <a class="link-btn" href="/music.mp3" target="_blank">下载默认音乐</a>
+      </div>
+      <div class="hint" style="margin-top:8px;">上传MP3/配置请使用原管理页：<a href="/alarm.html" style="color:#7c8cff;">alarm.html</a></div>
     </div>
 
-    <!-- 智能闹钟（整合米家+检测） -->
+    <!-- 智能闹钟 -->
     <div class="card">
       <div class="switch-row" onclick="toggleSmart(event)">
         <div><div class="switch-label">智能闹钟</div><div class="switch-desc">联动米家设备，工作时间自动检测</div></div>
@@ -209,13 +289,21 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
       </div>
       <div class="hidden-section" id="smartSection">
         <div id="miLoginStatus" style="margin-bottom:12px;"></div>
-        <div class="form-row"><input type="text" class="form-input" id="miUser" placeholder="手机号/邮箱"><input type="password" class="form-input" id="miPass" placeholder="密码"></div>
-        <div class="form-row" style="margin-bottom:12px;"><button class="btn btn-primary btn-sm" onclick="miLogin()">密码登录</button><button class="btn btn-ghost btn-sm" onclick="qrLogin()">扫码登录</button></div>
+        <div id="miLoginForm">
+          <div class="form-row"><input type="text" class="form-input" id="miUser" placeholder="手机号/邮箱"><input type="password" class="form-input" id="miPass" placeholder="密码"></div>
+          <div class="form-row" style="margin-bottom:12px;"><button class="btn btn-primary btn-sm" onclick="miLogin()">密码登录</button><button class="btn btn-ghost btn-sm" onclick="qrLogin()">扫码登录</button></div>
+        </div>
+        <div id="miLoggedInBox" style="display:none;margin-bottom:12px;">
+          <div style="display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;">
+            <span id="miLoggedInText" class="badge badge-ok">已登录</span>
+            <button class="btn btn-ghost btn-sm" onclick="miLogout()">注销</button>
+          </div>
+        </div>
         <div class="qr-box hidden-section" id="qrBox"><div id="qrCodeImg"></div><div class="qr-tip" id="qrTip">请使用米家App扫码</div></div>
         <div class="form-group"><label class="form-label">家庭</label><select class="form-input" id="miHomeSelect" onchange="loadMiDevices()"><option value="">请先登录</option></select></div>
         <div class="form-group"><label class="form-label">设备</label><select class="form-input" id="miDeviceSelect" onchange="selectMiDevice()"><option value="">请选择家庭</option></select></div>
         <div class="form-row"><div class="form-group" style="margin-bottom:0;"><label class="form-label">siid</label><input type="text" class="form-input" id="miSiid" value="2"></div><div class="form-group" style="margin-bottom:0;"><label class="form-label">piid</label><input type="text" class="form-input" id="miPiid" value="1"></div></div>
-        <div style="font-size:11px;color:rgba(228,230,235,0.35);margin-top:8px;" id="miDeviceStatus"></div>
+        <div class="device-status-row"><span id="miDeviceStatus"></span><button class="refresh-btn" onclick="checkDeviceStatus()" title="刷新">&#128260;</button></div>
 
         <div class="form-label" style="margin-top:16px;">工作时间区间</div>
         <div id="intervalList"></div>
@@ -260,7 +348,14 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
       <div class="tp-col">
         <div class="tp-label">分</div>
         <div class="tp-display" id="tpMin">30</div>
-        <div class="tp-btns"><button class="tp-btn" onclick="adjMin(-1)">&#8722;</button><button class="tp-btn" onclick="adjMin(1)">+</button></div>
+        <div class="tp-btns">
+          <button class="tp-btn" onclick="adjMin(-5)">&#8722;5</button>
+          <button class="tp-btn" onclick="adjMin(5)">+5</button>
+        </div>
+        <div class="tp-btns">
+          <button class="tp-btn fine" onclick="adjMin(-1)">&#8722;1</button>
+          <button class="tp-btn fine" onclick="adjMin(1)">+1</button>
+        </div>
       </div>
     </div>
     <div class="form-label">重复</div>
@@ -296,6 +391,7 @@ select.form-input option{background:#1a1d27;color:#e4e6eb;}
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
 var weekNames=['周日','周一','周二','周三','周四','周五','周六'];
+var typeNames={'1':'工作日','2':'休息日','3':'一次','4':'每天','5':'周日','6':'周一','7':'周二','8':'周三','9':'周四','10':'周五','11':'周六'};
 var qrPollTimer=null;
 var modalCallback=null;
 var tpHour=7,tpMin=30;
@@ -306,7 +402,6 @@ function pad(n){return n<10?'0'+n:''+n;}
 function $(id){return document.getElementById(id);}
 function showToast(msg){var t=$('toast');t.textContent=msg;t.className='toast show';setTimeout(function(){t.className='toast';},1800);}
 
-// 时钟
 function updateClock(){
   var d=new Date();
   $('tH').textContent=pad(d.getHours());$('tM').textContent=pad(d.getMinutes());$('tS').textContent=pad(d.getSeconds());
@@ -314,7 +409,6 @@ function updateClock(){
 }
 updateClock();setInterval(updateClock,1000);
 
-// 标签
 var tabTitles={clock:'闹钟',alarm:'闹钟管理',setting:'设置'};
 var tabSubs={clock:'',alarm:'添加和管理闹钟',setting:'基础 / 音乐 / 智能闹钟'};
 function switchTab(name){
@@ -330,12 +424,14 @@ function switchTab(name){
   if(name==='setting')loadConfig();
 }
 
-// 模态框
 function showModal(title,body,cb){$('modalTitle').textContent=title;$('modalBody').innerHTML=body;modalCallback=cb;$('modalOverlay').className='modal-overlay show';}
 function closeModal(e){if(e&&e.target!==$('modalOverlay')&&e.type==='click')return;$('modalOverlay').className='modal-overlay';modalCallback=null;}
 function confirmModal(){if(modalCallback)modalCallback();closeModal();}
 
 function ajax(url,cb){var x=new XMLHttpRequest();x.open('GET',url,true);x.onreadystatechange=function(){if(x.readyState===4)cb(x.status,x.responseText);};x.send();}
+function doAction(url){ajax(url,function(){});}
+function openCamera(){location.href='//'+location.hostname+':8880';}
+function timeStop(){var m=$('timeStopMin').value||'30';ajax('/timeStop?min='+m,function(){showToast('已设定'+m+'分钟后停止');});}
 
 // 下次闹钟
 function fetchNextAlarm(){
@@ -347,13 +443,9 @@ function fetchNextAlarm(){
         $('nextAlarmBox').style.display='flex';$('noAlarm').style.display='none';
         $('nextAlarmTime').textContent=d.time;
         var h=Math.floor(d.seconds/3600),m=Math.floor((d.seconds%3600)/60);
-        var cd='';
-        if(h>0)cd+=h+'小时';
-        cd+=m+'分钟后响铃';
+        var cd='';if(h>0)cd+=h+'小时';cd+=m+'分钟后响铃';
         $('nextAlarmCountdown').textContent=cd;
-      }else{
-        $('nextAlarmBox').style.display='none';$('noAlarm').style.display='block';
-      }
+      }else{$('nextAlarmBox').style.display='none';$('noAlarm').style.display='block';}
     }catch(e){}
   });
 }
@@ -367,24 +459,15 @@ function fetchSmartStatus(){
       if(d.enabled===true){
         $('smartCard').style.display='block';
         var dot=$('smartDot'),txt=$('smartText'),sub=$('smartSub');
-        if(d.active===true){
-          dot.className='smart-dot warn';txt.textContent='持续响铃中';
-          sub.textContent='设备仍在运行 · 音量'+(d.currentVol||'--')+'%';
-        }else if(d.miLoggedIn===true&&d.deviceName){
-          dot.className='smart-dot on';txt.textContent='已启用 · '+d.deviceName;
-          sub.textContent='工作时间内自动检测设备状态';
-        }else{
-          dot.className='smart-dot off';txt.textContent='已启用';
-          sub.textContent='请在设置中登录米家并选择设备';
-        }
-      }else{
-        $('smartCard').style.display='none';
-      }
+        if(d.active===true){dot.className='smart-dot warn';txt.textContent='持续响铃中';sub.textContent='设备仍在运行 · 音量'+(d.currentVol||'--')+'%';}
+        else if(d.miLoggedIn===true&&d.deviceName){dot.className='smart-dot on';txt.textContent='已启用 · '+d.deviceName;sub.textContent='工作时间内自动检测设备状态';}
+        else{dot.className='smart-dot off';txt.textContent='已启用';sub.textContent='请在设置中登录米家并选择设备';}
+      }else{$('smartCard').style.display='none';}
     }catch(e){}
   });
 }
 
-// 状态轮询
+// 播放状态
 function fetchStatus(){
   ajax('/status',function(st,text){
     if(st!==200)return;
@@ -392,13 +475,27 @@ function fetchStatus(){
       var d=JSON.parse(text);
       var playing=d.isAlarm===true||d.isOversleep===true;
       $('stopCard').style.display=playing?'block':'none';
+      var msg='';
+      if(d.batLevel)msg+='电量 '+d.batLevel.trim()+'% · ';
+      if(d.stopUnix)msg+='将在 '+new Date(d.stopUnix*1000).toLocaleTimeString().split(' ')[0]+' 后停止 · ';
+      if(d.skipAlarm)msg+='将跳过 '+d.skipAlarm+' 次闹钟 · ';
+      if(d.isStop)msg+='已停止';
+      else if(d.isPaused)msg+='已暂停';
+      else{
+        if(d.isAlarm)msg+='闹钟 ';
+        if(d.playList&&d.playList.length>0)msg+='待播放 '+d.playList.length+' 首 · ';
+        if(d.nowId)msg+='<a href="https://music.163.com/#/song?id='+d.nowId+'" target="_blank">正在播放</a>';
+        else if(d.nowUrl)msg+='<a href="'+d.nowUrl+'" target="_blank">正在播放</a>';
+        else msg+='待机中';
+      }
+      $('nowPlaying').innerHTML=msg;
     }catch(e){}
   });
 }
 $('volSlider').addEventListener('input',function(){$('volNum').textContent=this.value;ajax('/vol?vol='+this.value,function(){});});
 function stopAlarm(){ajax('/stop',function(){fetchStatus();});}
 
-// 闹钟列表
+// 闹钟列表 - 用d.alarms
 function loadAlarms(){
   ajax('/status',function(st,text){
     if(st!==200)return;
@@ -409,16 +506,19 @@ function loadAlarms(){
       if(keys.length>0){
         for(var i=0;i<keys.length;i++){
           var time=keys[i];
-          var days=alarms[time]?alarms[time].join(','):'每天';
+          var types=alarms[time]||[];
+          var labels=[];
+          for(var j=0;j<types.length;j++){labels.push(typeNames[types[j]]||types[j]);}
+          var daysStr=labels.length>0?labels.join('、'):'每天';
           var item=document.createElement('div');item.className='alarm-item';
-          item.innerHTML='<div><div class="alarm-time">'+time+'</div><div class="alarm-days">'+days+'</div></div><button class="btn btn-danger btn-sm" onclick="delAlarm(\''+time+'\')">删除</button>';
+          item.innerHTML='<div><div class="alarm-time">'+time+'</div><div class="alarm-days">'+daysStr+'</div></div><button class="btn btn-danger btn-sm" onclick="delAlarm(\''+time+'\')">删除</button>';
           list.appendChild(item);
         }
       }else{list.innerHTML='<div class="alarm-empty">暂无闹钟，点击右上角添加</div>';}
     }catch(e){}
   });
 }
-function delAlarm(t){ajax('/delAlarm?hhmm='+encodeURIComponent(t),function(){setTimeout(loadAlarms,400);showToast('已删除');});}
+function delAlarm(t){ajax('/delAlarm?hhmm='+encodeURIComponent(t),function(){setTimeout(loadAlarms,400);fetchNextAlarm();showToast('已删除');});}
 
 // 添加闹钟模态框
 function openAddAlarmModal(){
@@ -433,16 +533,16 @@ function adjMin(d){tpMin=(tpMin+d+60)%60;updateTPDisplay();}
 function toggleType(el){
   var t=el.getAttribute('data-type');
   var idx=selectedTypes.indexOf(t);
-  if(idx>=0){selectedTypes.splice(idx,1);}else{selectedTypes.push(t);}
-  // 如果选了每天/工作日/休息日，清空具体星期
-  if(t==='1'||t==='2'||t==='4'){selectedDays=[];}
+  if(idx>=0){selectedTypes.splice(idx,1);}
+  else{selectedTypes=[t];}
+  if(selectedTypes.length>0){selectedDays=[];}
   updatePillDisplay();
 }
 function toggleDay(el){
   var d=el.getAttribute('data-day');
   var idx=selectedDays.indexOf(d);
-  if(idx>=0){selectedDays.splice(idx,1);}else{selectedDays.push(d);}
-  // 选了具体星期就清空每天/工作日/休息日
+  if(idx>=0){selectedDays.splice(idx,1);}
+  else{selectedDays.push(d);}
   if(selectedDays.length>0){selectedTypes=[];}
   updatePillDisplay();
 }
@@ -463,7 +563,9 @@ function confirmAddAlarm(){
   if(types.length===0)types=['4'];
   var hhmm=pad(tpHour)+pad(tpMin);
   ajax('/addAlarm?hhmm='+encodeURIComponent(hhmm)+'&type='+types.join(','),function(){
-    closeAddAlarmModal();setTimeout(loadAlarms,400);showToast('已添加');
+    closeAddAlarmModal();
+    setTimeout(function(){loadAlarms();fetchNextAlarm();},400);
+    showToast('已添加');
   });
 }
 
@@ -480,6 +582,17 @@ function toggleSmart(e){
 
 // 米家
 function miLogin(){var u=$('miUser').value.trim(),p=$('miPass').value;if(!u||!p){showToast('请输入账号密码');return;}ajax('/mi/login?user='+encodeURIComponent(u)+'&pass='+encodeURIComponent(p),function(st){if(st===200){showToast('登录成功');checkMiStatus();loadMiHomes();}else showToast('登录失败');});}
+function miLogout(){ajax('/mi/logout',function(){showToast('已注销');checkMiStatus();$('miHomeSelect').innerHTML='<option value="">请先登录</option>';$('miDeviceSelect').innerHTML='<option value="">请选择家庭</option>';});}
+function updateMiLoginUI(loggedIn,userId){
+  if(loggedIn){
+    $('miLoginForm').style.display='none';
+    $('miLoggedInBox').style.display='block';
+    $('miLoggedInText').textContent='已登录'+(userId?': '+userId:'');
+  }else{
+    $('miLoginForm').style.display='block';
+    $('miLoggedInBox').style.display='none';
+  }
+}
 function qrLogin(){
   $('qrBox').className='qr-box show';$('qrTip').textContent='生成中...';
   ajax('/mi/qr/generate',function(st,text){
@@ -500,8 +613,12 @@ function qrLogin(){
 function checkMiStatus(){
   ajax('/mi/status',function(st,text){
     var el=$('miLoginStatus');
-    if(st===200){try{var d=JSON.parse(text);if(d.loggedIn)el.innerHTML='<span class="badge badge-ok">已登录</span>';else el.innerHTML='<span class="badge badge-warn">未登录</span>';}catch(e){el.innerHTML='<span class="badge badge-err">异常</span>';}}
-    else el.innerHTML='<span class="badge badge-err">未登录</span>';
+    if(st===200){
+      try{var d=JSON.parse(text);
+        if(d.loggedIn){el.innerHTML='<span class="badge badge-ok">已登录</span>';updateMiLoginUI(true,d.userId);}
+        else{el.innerHTML='<span class="badge badge-warn">未登录</span>';updateMiLoginUI(false);}
+      }catch(e){el.innerHTML='<span class="badge badge-err">异常</span>';updateMiLoginUI(false);}
+    }else{el.innerHTML='<span class="badge badge-err">未登录</span>';updateMiLoginUI(false);}
   });
 }
 function loadMiHomes(){
@@ -518,11 +635,10 @@ function loadMiDevices(){
   });}catch(e){}
 }
 function selectMiDevice(){var val=$('miDeviceSelect').value;if(!val)return;try{var d=JSON.parse(val);ajax('/mi/select?did='+encodeURIComponent(d.did)+'&name='+encodeURIComponent(d.name),function(){showToast('设备已选择');checkDeviceStatus();});}catch(e){}}
-function checkDeviceStatus(){var val=$('miDeviceSelect').value;if(!val)return;try{var d=JSON.parse(val);ajax('/mi/devicestatus?did='+encodeURIComponent(d.did),function(st,text){if(st===200){try{var r=JSON.parse(text);$('miDeviceStatus').innerHTML='<span class="badge '+(r.on?'badge-ok':'badge-warn')+'">设备: '+(r.on?'开启':'关闭')+'</span>';}catch(e){}}});}catch(e){}}
+function checkDeviceStatus(){var val=$('miDeviceSelect').value;if(!val){$('miDeviceStatus').innerHTML='';return;}try{var d=JSON.parse(val);ajax('/mi/devicestatus?did='+encodeURIComponent(d.did),function(st,text){if(st===200){try{var r=JSON.parse(text);$('miDeviceStatus').innerHTML='<span class="badge '+(r.on?'badge-ok':'badge-warn')+'">设备: '+(r.on?'开启':'关闭')+'</span>';}catch(e){}}});}catch(e){}}
 
 function toggleWorkOnly(e){e.stopPropagation();var sw=$('woSwitch');if(sw.className.indexOf('on')>=0)sw.className='switch';else sw.className='switch on';}
 
-// 工作区间
 function addInterval(s,e){var list=$('intervalList');var item=document.createElement('div');item.className='interval-item';item.innerHTML='<input type="text" class="form-input" placeholder="开始" value="'+(s||'0900')+'"><span class="interval-sep">至</span><input type="text" class="form-input" placeholder="结束" value="'+(e||'1800')+'"><button class="interval-del" onclick="this.parentNode.remove()">&times;</button>';list.appendChild(item);}
 function getIntervals(){var items=$('intervalList').querySelectorAll('.interval-item');var r=[];for(var i=0;i<items.length;i++){var ins=items[i].querySelectorAll('input');var s=ins[0].value.trim(),e=ins[1].value.trim();if(s&&e)r.push({start:s,end:e});}return r;}
 
@@ -547,6 +663,13 @@ function loadConfig(){
       for(var i=0;i<ivs.length;i++)addInterval(ivs[i].start,ivs[i].end);
     }catch(e){}
   });
+  // 加载基础配置
+  ajax('/status',function(st,text){
+    if(st!==200)return;
+    try{
+      // 基础配置需要从配置文件加载，这里先留空让用户填写
+    }catch(e){}
+  });
 }
 
 // 保存
@@ -555,13 +678,15 @@ function saveAll(){
   add('volDefault',$('volDefault').value);add('volAlarm',$('volAlarm').value);add('alarmTime',$('alarmTime').value);add('tz',$('tz').value);
   add('weatherCityCode',$('weatherCityCode').value);add('weatherUpdate',$('weatherUpdate').value);
   add('nePlayListId',$('nePlayListId').value);add('defPlayListId',$('defPlayListId').value);
+  add('musicQuality',$('musicQuality').value);add('savePath',$('savePath').value);add('defSeek',$('defSeek').value);add('smallWeekDate',$('smallWeekDate').value);
+  add('wakelock',$('wakelock').checked?'1':'0');add('muteWhenStop',$('muteWhenStop').checked?'1':'0');add('broadcastMode',$('broadcastMode').checked?'1':'0');
   add('oversleepEnable',$('smartSwitch').className.indexOf('on')>=0?'1':'0');
   add('workOnly',$('woSwitch').className.indexOf('on')>=0?'1':'0');
   add('workIntervals',JSON.stringify(getIntervals()));
   add('barkUrl',$('barkUrl').value);add('barkInterval',$('barkInterval').value);add('oversleepCheckInterval',$('checkInterval').value);
   add('volRampStart',$('volRampStart').value);add('volRampStep',$('volRampStep').value);add('volRampInterval',$('volRampInterval').value);add('volRampMax',$('volRampMax').value);
   add('miSiid',$('miSiid').value);add('miPiid',$('miPiid').value);
-  ajax('/updateCfg?'+p.join('&'),function(st){if(st===200){showToast('保存成功');setTimeout(function(){switchTab('clock');},600);}else showToast('保存失败');});
+  ajax('/updateCfg?'+p.join('&'),function(st){if(st===200){showToast('保存成功');setTimeout(function(){switchTab('clock');fetchNextAlarm();fetchSmartStatus();},600);}else showToast('保存失败');});
 }
 
 // 初始化

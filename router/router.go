@@ -692,6 +692,19 @@ func Init(urlPrefix string) *gin.Engine {
 		})
 	})
 
+	// 米家注销
+	root.GET("/mi/logout", func(c *gin.Context) {
+		mihome.Logout()
+		conf.Cfg.MiUserID = ""
+		conf.Cfg.MiServiceToken = ""
+		conf.Cfg.MiSSecurity = ""
+		conf.Cfg.MiHomeID = ""
+		conf.Cfg.MiDeviceDid = ""
+		conf.Cfg.MiDeviceName = ""
+		conf.Save()
+		c.JSON(200, gin.H{"ok": true})
+	})
+
 	// 扫码登录：生成二维码
 	root.GET("/mi/qr/generate", func(c *gin.Context) {
 		qr, err := mihome.GenerateQrCode()
